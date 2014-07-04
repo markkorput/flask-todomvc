@@ -29,7 +29,7 @@ def create_app(priority_settings=None):
         db.create_all()
         if not User.query.first():
             user_datastore.create_user(
-                email='kevin@example.com',
-                password=encrypt_password('password'))
+                email='admin',
+                password=encrypt_password('admin'))
             db.session.commit()
     return app
