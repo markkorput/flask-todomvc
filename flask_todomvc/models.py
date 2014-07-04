@@ -47,3 +47,37 @@ class User(db.Model, UserMixin):
     roles = db.relationship(
         'Role', secondary=roles_users,
         backref=db.backref('users', lazy='dynamic'))
+
+
+class Skill(db.Model):
+    __tablename__ = 'skills'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String)
+
+
+class Question(db.Model):
+    __tablename__ = 'questions'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String)
+
+
+class Answer(db.Model):
+    __tablename__ = 'answers'
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column('question_id', db.Integer, db.ForeignKey('questions.id'))
+    text = db.Column(db.String)
+
+
+class AnswerSkillManipulation(db.Model):
+    __tablename__ = 'answer_skill_manipulations'
+    id = db.Column(db.Integer, primary_key=True)
+    answer_id = db.Column(db.Integer, db.ForeignKey('answers.id'))
+    skill_id = db.Column(db.Integer, db.ForeignKey('skills.id'))
+
+
+class UserSkill(db.Model):
+    __tablename__ = 'user_skills'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    skill_id = db.Column(db.Integer, db.ForeignKey('skills.id'))
+    score = db.Column(db.Integer)
