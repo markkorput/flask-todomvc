@@ -6,6 +6,7 @@ from .extensions import db, security
 from .models import User, Role, Question, Skill
 from .index import bp as index
 from .todos import bp as todos
+from .game import bp as game
 
 from flask_security import SQLAlchemyUserDatastore
 from flask_security.utils import encrypt_password
@@ -24,6 +25,7 @@ def create_app(priority_settings=None):
 
     app.register_blueprint(index)
     app.register_blueprint(todos)
+    app.register_blueprint(game)
 
     with app.app_context():
         db.create_all()
