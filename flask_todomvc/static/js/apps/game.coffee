@@ -1,4 +1,46 @@
 #
+# Question
+#
+class Answer extends Backbone.Model
+  defaults:
+    text: 'Yes'
+    manipulations:
+      'income tax': 0
+      'education level': 0
+      'public health': 0
+      'entrepreneurship': 0
+      'community art': 0
+      'immigration': 0
+
+
+class Question extends Backbone.Model
+  defaults:
+    text: 'Question Text'
+    answers: [
+      new Answer()
+      new Answer(text: 'No')
+    ]
+
+class QuestionList extends Backbone.Collection
+  model: Question
+  localStorage: new Backbone.LocalStorage("todos-backbone")
+
+class QuestionListView extends Backbone.View
+  tagName: "ul"
+  className: "questions-list"
+
+  initialize: ->
+    @questions = new QuestionList;
+    @questions.fetch();
+
+  render: ->
+    @$el.html '<h1>Questions</h1>'
+    @questions.each (question) => 
+      answers = _.map(question.get('answers') || [], (answer) -> answer.get('text'))
+      @$el.append('<li>'+question.get('text')+' ('+answers.join(', ')+')</li>')
+    this
+
+#
 # User
 #
 
@@ -46,9 +88,37 @@ class UserListView extends Backbone.View
 class Game extends Backbone.Model
   defaults: { created_at: new Date(), user: new User() }
 
-  # initialize: ->
-  #   @on 'destroy', ->
-  #     @get('user').destroy if @get('user')
+  initialize: ->
+    #   @on 'destroy', ->
+    #     @get('user').destroy if @get('user')
+
+    @questions = new QuestionList()
+    @questions.fetch();
+    @_createQuestions() if @questions.length < 1
+
+  _createQuestions: ->
+    @questions.create
+      text: 'Should we build more schools?'
+      answers: [
+        new Answer
+          text: 'Yes'
+          manipulations:
+            'income tax': 5
+            'education level': 3
+            'public health': 2
+            'entrepreneurship': 3
+            'community art': -3
+            'immigration': 0
+        new Answer
+          text: 'No'
+          manipulations:
+            'income tax': -3
+            'education level': -4
+            'public health': -5
+            'entrepreneurship': -1
+            'community art': +4
+            'immigration': 0
+      ]
 
 class GameList extends Backbone.Collection
   model: Game
@@ -84,4 +154,5 @@ class @GameView extends Backbone.View
     @$el.html ''
     @$el.append(new GameListView().render().el)
     @$el.append(new UserListView().render().el)
+    @$el.append(new QuestionListView().render().el)
     this
