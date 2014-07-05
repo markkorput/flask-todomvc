@@ -91,7 +91,7 @@ class GraphLines
     y2 = @visual_settings.get('verticalScale') * skill.get('score')
     line = @two.makeLine(x1, y1, x2, y2)
     line.stroke = '#ff0000'
-    line.linewidth = 3
+    line.linewidth = @visual_settings.get('lineFatness')
     line.addTo @_group()
 
   growLine: (skill) ->
@@ -117,9 +117,9 @@ class GraphLines
   _growNewState: (newState) ->
     # console.log 'Growing new state'
     # newState.get('skills').each (skill) => @growLine(skill)
-    console.log @game_states
     @_initState(@_previousState(), newState, @game_states.length-1)
     @_group().scale = @_targetScale()
+    @_group().linewidth = @visual_settings.get('lineFatness') / @_targetScale()
 
   _previousState: ->
     @options.game_states.at @options.game_states.length - 2

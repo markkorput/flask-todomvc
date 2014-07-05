@@ -120,7 +120,7 @@
       y2 = this.visual_settings.get('verticalScale') * skill.get('score');
       line = this.two.makeLine(x1, y1, x2, y2);
       line.stroke = '#ff0000';
-      line.linewidth = 3;
+      line.linewidth = this.visual_settings.get('lineFatness');
       return line.addTo(this._group());
     };
 
@@ -147,9 +147,9 @@
     };
 
     GraphLines.prototype._growNewState = function(newState) {
-      console.log(this.game_states);
       this._initState(this._previousState(), newState, this.game_states.length - 1);
-      return this._group().scale = this._targetScale();
+      this._group().scale = this._targetScale();
+      return this._group().linewidth = this.visual_settings.get('lineFatness') / this._targetScale();
     };
 
     GraphLines.prototype._previousState = function() {
