@@ -48,34 +48,54 @@ class GraphLine extends Backbone.Model
 
     # event hooks
     @game_states.on 'add', @_growNewState, this
+    @visual_settings.on 'change:animationRange', @_updateVertices, this
 
   _initPolygons: ->
     _.each _.range(1, @game_states.length - 1), (i) =>
       @_initState(@game_states.at(i-1), @game_states.at(i), i)
 
   _initState: (prevState, state, idx) ->
-    skill = state.get('skills').find (_skill) => _skill.get('text') == @skill.get('text')
-    prevSkill = prevState.get('skills').find (_skill) => _skill.get('text') == @skill.get('text')
+    skill = @_skillFromState(state)
+    prevSkill = @_skillFromState(prevState)
     @_addLine(prevSkill, skill, idx) if skill && prevSkill
-    
+  
+  _skillFromState: (state) -> state.get('skills').find (_skill) => _skill.get('text') == @skill.get('text')
+
   _addLine: (prevSkill, skill, index) ->
     x1 = (index - 1) * @visual_settings.get('horizontalScale')
-    y1 = @yForScore prevSkill.get('score')
+    # y1 = @yForScore prevSkill.get('score')
     x2 = x1 + @visual_settings.get('horizontalScale')
-    y2 = @yForScore skill.get('score')
-    line = @two.makeLine(x1, y1, x2, y2)
+    # y2 = @yForScore skill.get('score')
+    line = @two.makeLine(x1, 0, x2, 0)
     line.stroke = '#ff0000'
     line.linewidth = @visual_settings.get('lineFatness')
     line.addTo @group
+    @_updateVertices()
 
   _growNewState: (newState) ->
+    # console.log "new score: "+@_skillFromState(newState).get('score')
     prevState = @game_states.at @options.game_states.length - 2
     @_initState(prevState, newState, @game_states.length-1)
 
-  yForScore: (score) ->
-    # -y * @get('two').height / @get('scoreRange')
-    @visual_settings.scoreToScreenFactor() * score * @visual_settings.get('verticalScaler')
+  yForScore: (score, range) ->
+    @visual_settings.scoreToScreenFactor(range) * score
 
+  _linesPolygons: -> _.map @group.children, (poly,key,obj) -> poly
+
+  _verticesByStateIndex: (idx) ->
+    vertices = []
+    if p = @_linesPolygons()[idx]
+      vertices.push p.vertices[0]
+    if p = @_linesPolygons()[idx-1] 
+      if p.vertices[1]
+        vertices.push p.vertices[1]
+    return vertices
+
+  _updateVertices: ->
+    @game_states.each (state, idx) =>
+      if skill = @_skillFromState(state)
+        _.each @_verticesByStateIndex(idx), (vertice) =>
+          vertice.y = @yForScore(skill.get('score'))
 
 class GraphLines extends Backbone.Model
   constructor: (_opts) ->
@@ -106,19 +126,20 @@ class GraphLinesOps
 
     # start by moving the whole group to the right edge of the screen, making it look the lines scroll into view
     # console.log @target.visual_settings.desiredBaseline()
-    @target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
+    #@target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
+    @target._group().translation.set(0, @target.visual_settings.desiredBaseline())
     # @target._group().scale = 0.3
 
     # event hooks
     # @target.on 'new-state', (-> @shrinkTween().start()), this
 
-    @target.game_states.on 'add', =>
-      # console.log 'Scroll Tween'
-      @scrollTween().start()
+    # @target.game_states.on 'add', =>
+    #   # console.log 'Scroll Tween'
+    #   @scrollTween().start()
 
-    @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
-      # console.log 'baseline shift to: ' + model.desiredBaseline()
-      @baselineShiftTween(model.desiredBaseline()).start()
+    # @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
+    #   # console.log 'baseline shift to: ' + model.desiredBaseline()
+    #   @baselineShiftTween(model.desiredBaseline()).start()
 
     @target.visual_settings.on 'change:scoreRange', (model,val,obj) =>
       # console.log 'range shift to: ' + model.minScore() + ', '+ model.maxScore()
@@ -136,22 +157,13 @@ class GraphLinesOps
       .easing( TWEEN.Easing.Exponential.InOut )
 
   rangeShiftTween: (from, to) ->
-    scaleFactor = from / to
-    console.log 'rangeShiftTween: '+scaleFactor
-    # console.log from
-    # console.log to
-
-    tween = new TWEEN.Tween( {y: 0} )
-      .to({y: 1}, 500)
+    from = @target.visual_settings.get('animationRange')
+    that = this
+    tween = new TWEEN.Tween({range: from})
+      .to({range: to}, 500)
       .easing( TWEEN.Easing.Exponential.InOut )
-      .onStart =>
-        _.each @target._group().children, (polygon,nr) ->
-          _.each polygon.vertices, (vertice) ->
-            new TWEEN.Tween(vertice)
-              .to({y: vertice.y * scaleFactor})
-              .easing( TWEEN.Easing.Exponential.InOut )
-              .start()
-
+      .onUpdate (progress) ->
+        that.target.visual_settings.set({animationRange: this.range})
 
   shrinkTween: ->
     toScale = @_shrinkScale()
@@ -166,18 +178,16 @@ class GraphLinesOps
     scale = 1 / ((bound.width / @target._group().scale) / @two.width)
 
 
-
-
-
-
 # helper class to perform calculations based in a specific state
 class VisualSettings extends Backbone.Model
   defaults:
-    horizontalScale: 300
+    horizontalScale: 100
     verticalBase: 0
     lineFatness: 3
-    scoreRange: 5
+    originalScoreRange: 15
+    scoreRange: 15
     verticalScaler: 1
+    animationRange: 15
 
   initialize: ->
     @calculate()
@@ -188,7 +198,7 @@ class VisualSettings extends Backbone.Model
     # @set(verticalBase: @get('two').height/2) if @get('two')
     @set {
       verticalBase: @desiredBaseline()
-      # scoreRange: @deltaScore()
+      scoreRange: @deltaScore()
     }
 
   _allScores: ->
@@ -200,9 +210,11 @@ class VisualSettings extends Backbone.Model
   minScore: -> _.min @_allScores()
   avgScore: -> @minScore() + @deltaScore()/2
   deltaScore: -> @maxScore() - @minScore()
-  scoreToScreenFactor: ->
-    return 1 if @get('scoreRange') == 0
-    @get('two').height / -@get('scoreRange')
+
+  scoreToScreenFactor: (range) ->
+    range = @get('animationRange') if range == undefined
+    return 100 if range == 0
+    (@get('two').height) / -range
 
   desiredBaseline: ->
     return @get('two').height/2 if @deltaScore() == 0

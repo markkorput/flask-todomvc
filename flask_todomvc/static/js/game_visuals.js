@@ -69,6 +69,7 @@
       this.group.translation.set(0, 0);
       this._initPolygons();
       this.game_states.on('add', this._growNewState, this);
+      this.visual_settings.on('change:animationRange', this._updateVertices, this);
     }
 
     GraphLine.prototype._initPolygons = function() {
@@ -79,29 +80,30 @@
     };
 
     GraphLine.prototype._initState = function(prevState, state, idx) {
-      var prevSkill, skill,
-        _this = this;
-      skill = state.get('skills').find(function(_skill) {
-        return _skill.get('text') === _this.skill.get('text');
-      });
-      prevSkill = prevState.get('skills').find(function(_skill) {
-        return _skill.get('text') === _this.skill.get('text');
-      });
+      var prevSkill, skill;
+      skill = this._skillFromState(state);
+      prevSkill = this._skillFromState(prevState);
       if (skill && prevSkill) {
         return this._addLine(prevSkill, skill, idx);
       }
     };
 
+    GraphLine.prototype._skillFromState = function(state) {
+      var _this = this;
+      return state.get('skills').find(function(_skill) {
+        return _skill.get('text') === _this.skill.get('text');
+      });
+    };
+
     GraphLine.prototype._addLine = function(prevSkill, skill, index) {
-      var line, x1, x2, y1, y2;
+      var line, x1, x2;
       x1 = (index - 1) * this.visual_settings.get('horizontalScale');
-      y1 = this.yForScore(prevSkill.get('score'));
       x2 = x1 + this.visual_settings.get('horizontalScale');
-      y2 = this.yForScore(skill.get('score'));
-      line = this.two.makeLine(x1, y1, x2, y2);
+      line = this.two.makeLine(x1, 0, x2, 0);
       line.stroke = '#ff0000';
       line.linewidth = this.visual_settings.get('lineFatness');
-      return line.addTo(this.group);
+      line.addTo(this.group);
+      return this._updateVertices();
     };
 
     GraphLine.prototype._growNewState = function(newState) {
@@ -110,8 +112,40 @@
       return this._initState(prevState, newState, this.game_states.length - 1);
     };
 
-    GraphLine.prototype.yForScore = function(score) {
-      return this.visual_settings.scoreToScreenFactor() * score * this.visual_settings.get('verticalScaler');
+    GraphLine.prototype.yForScore = function(score, range) {
+      return this.visual_settings.scoreToScreenFactor(range) * score;
+    };
+
+    GraphLine.prototype._linesPolygons = function() {
+      return _.map(this.group.children, function(poly, key, obj) {
+        return poly;
+      });
+    };
+
+    GraphLine.prototype._verticesByStateIndex = function(idx) {
+      var p, vertices;
+      vertices = [];
+      if (p = this._linesPolygons()[idx]) {
+        vertices.push(p.vertices[0]);
+      }
+      if (p = this._linesPolygons()[idx - 1]) {
+        if (p.vertices[1]) {
+          vertices.push(p.vertices[1]);
+        }
+      }
+      return vertices;
+    };
+
+    GraphLine.prototype._updateVertices = function() {
+      var _this = this;
+      return this.game_states.each(function(state, idx) {
+        var skill;
+        if (skill = _this._skillFromState(state)) {
+          return _.each(_this._verticesByStateIndex(idx), function(vertice) {
+            return vertice.y = _this.yForScore(skill.get('score'));
+          });
+        }
+      });
     };
 
     return GraphLine;
@@ -162,13 +196,7 @@
       this.options = _opts || {};
       this.target = _opts.target || _opts.graph_lines;
       this.two = this.target.two;
-      this.target._group().translation.set(this.two.width, this.target.visual_settings.desiredBaseline());
-      this.target.game_states.on('add', function() {
-        return _this.scrollTween().start();
-      });
-      this.target.visual_settings.on('change:verticalBase', function(model, val, obj) {
-        return _this.baselineShiftTween(model.desiredBaseline()).start();
-      });
+      this.target._group().translation.set(0, this.target.visual_settings.desiredBaseline());
       this.target.visual_settings.on('change:scoreRange', function(model, val, obj) {
         return _this.rangeShiftTween(model.previous('scoreRange'), val).start();
       });
@@ -189,21 +217,16 @@
     };
 
     GraphLinesOps.prototype.rangeShiftTween = function(from, to) {
-      var scaleFactor, tween,
-        _this = this;
-      scaleFactor = from / to;
-      console.log('rangeShiftTween: ' + scaleFactor);
+      var that, tween;
+      from = this.target.visual_settings.get('animationRange');
+      that = this;
       return tween = new TWEEN.Tween({
-        y: 0
+        range: from
       }).to({
-        y: 1
-      }, 500).easing(TWEEN.Easing.Exponential.InOut).onStart(function() {
-        return _.each(_this.target._group().children, function(polygon, nr) {
-          return _.each(polygon.vertices, function(vertice) {
-            return new TWEEN.Tween(vertice).to({
-              y: vertice.y * scaleFactor
-            }).easing(TWEEN.Easing.Exponential.InOut).start();
-          });
+        range: to
+      }, 500).easing(TWEEN.Easing.Exponential.InOut).onUpdate(function(progress) {
+        return that.target.visual_settings.set({
+          animationRange: this.range
         });
       });
     };
@@ -237,11 +260,13 @@
     }
 
     VisualSettings.prototype.defaults = {
-      horizontalScale: 300,
+      horizontalScale: 100,
       verticalBase: 0,
       lineFatness: 3,
-      scoreRange: 5,
-      verticalScaler: 1
+      originalScoreRange: 15,
+      scoreRange: 15,
+      verticalScaler: 1,
+      animationRange: 15
     };
 
     VisualSettings.prototype.initialize = function() {
@@ -253,7 +278,8 @@
 
     VisualSettings.prototype.calculate = function() {
       return this.set({
-        verticalBase: this.desiredBaseline()
+        verticalBase: this.desiredBaseline(),
+        scoreRange: this.deltaScore()
       });
     };
 
@@ -281,11 +307,14 @@
       return this.maxScore() - this.minScore();
     };
 
-    VisualSettings.prototype.scoreToScreenFactor = function() {
-      if (this.get('scoreRange') === 0) {
-        return 1;
+    VisualSettings.prototype.scoreToScreenFactor = function(range) {
+      if (range === void 0) {
+        range = this.get('animationRange');
       }
-      return this.get('two').height / -this.get('scoreRange');
+      if (range === 0) {
+        return 100;
+      }
+      return (this.get('two').height) / -range;
     };
 
     VisualSettings.prototype.desiredBaseline = function() {
