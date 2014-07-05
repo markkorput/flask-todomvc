@@ -104,7 +104,7 @@
     };
 
     GraphLines.prototype.growLine = function(skill) {
-      var last_vertice, line, point1, point2, vertices, x, y;
+      var line, point1, point2, second_half, vertices, x, y;
       line = this._skillLine(skill);
       vertices = line.vertices || [];
       x = vertices.length / 2 * this.two.width;
@@ -112,8 +112,13 @@
       point1 = new Two.Anchor(x, y + this.visual_settings.get('lineFatness') / 2);
       point2 = new Two.Anchor(x, y - this.visual_settings.get('lineFatness') / 2);
       if (vertices.length > 0) {
-        last_vertice = vertices.pop();
-        $.merge(vertices, [point1, point2, last_vertice]);
+        second_half = _.map(_.range(vertices.length / 2, vertices.length / 2 - 1), function(i) {
+          return vertices[i];
+        });
+        vertices = _.map(_.range(vertices.length / 2), function(i) {
+          return vertices[i];
+        });
+        $.merge(vertices, $.merge([point1, point2], second_half));
       } else {
         vertices = [point1, point2];
       }
@@ -122,9 +127,16 @@
 
     GraphLines.prototype._growNewState = function(newState) {
       var _this = this;
-      return newState.get('skills').each(function(skill) {
+      newState.get('skills').each(function(skill) {
         return _this.growLine(skill);
       });
+      return this._group().scale = this._targetScale();
+    };
+
+    GraphLines.prototype._targetScale = function() {
+      var bound, scale;
+      bound = this._group().getBoundingClientRect();
+      return scale = 1 / ((bound.width / this._group().scale) / this.two.width);
     };
 
     return GraphLines;
@@ -150,7 +162,7 @@
     }
 
     VisualSettings.prototype.defaults = {
-      verticalScale: 10,
+      verticalScale: 100,
       verticalBase: 0,
       lineFatness: 3
     };

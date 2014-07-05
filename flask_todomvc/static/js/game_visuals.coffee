@@ -87,8 +87,10 @@ class GraphLines
     point2 = new Two.Anchor(x, y-@visual_settings.get('lineFatness')/2)
 
     if vertices.length > 0
-      last_vertice = vertices.pop()
-      $.merge(vertices, [point1, point2, last_vertice])
+      second_half = _.map _.range(vertices.length/2, vertices.length/2-1), (i) -> vertices[i]
+      vertices = _.map _.range(vertices.length/2), (i) -> vertices[i]
+      # last_vertice = vertices.pop()
+      $.merge(vertices, $.merge([point1, point2], second_half))
     else
       vertices = [point1, point2]
 
@@ -97,6 +99,15 @@ class GraphLines
   _growNewState: (newState) ->
     # console.log 'Growing new state'
     newState.get('skills').each (skill) => @growLine(skill)
+    @_group().scale = @_targetScale()
+
+  _targetScale: ->
+    # console.log 'bound'
+    # console.log bound
+    # console.log @_group()
+    bound = @_group().getBoundingClientRect()
+    scale = 1 / ((bound.width / @_group().scale) / @two.width)
+    
 
 
 # helper class to perform calculations based in a specific state
@@ -108,7 +119,7 @@ class VisualState
 
 class VisualSettings extends Backbone.Model
   defaults:
-    verticalScale: 10
+    verticalScale: 100
     verticalBase: 0
     lineFatness: 3
 
