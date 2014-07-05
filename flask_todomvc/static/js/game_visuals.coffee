@@ -41,6 +41,15 @@ class GraphLine extends Backbone.Model
     @visual_settings = _opts.visual_settings
     @skill = _opts.skill
 
+    @clr = _.sample [
+      '#0e2a99'
+      '#1f79aa'
+      '#9edbfc'
+      '#fffeff'
+      '#f33060'
+      '#d8245b'
+    ]
+
     @group = @two.makeGroup()
     @group.translation.set(0, 0)
 
@@ -67,7 +76,7 @@ class GraphLine extends Backbone.Model
     x2 = x1 + @visual_settings.get('horizontalScale')
     # y2 = @yForScore skill.get('score')
     line = @two.makeLine(x1, 0, x2, 0)
-    line.stroke = '#ff0000'
+    line.stroke = @clr
     line.linewidth = @visual_settings.get('lineFatness')
     line.addTo @group
     @_updateVertices()

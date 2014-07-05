@@ -65,6 +65,7 @@
       this.game_states = _opts.game_states;
       this.visual_settings = _opts.visual_settings;
       this.skill = _opts.skill;
+      this.clr = _.sample(['#0e2a99', '#1f79aa', '#9edbfc', '#fffeff', '#f33060', '#d8245b']);
       this.group = this.two.makeGroup();
       this.group.translation.set(0, 0);
       this._initPolygons();
@@ -100,7 +101,7 @@
       x1 = (index - 1) * this.visual_settings.get('horizontalScale');
       x2 = x1 + this.visual_settings.get('horizontalScale');
       line = this.two.makeLine(x1, 0, x2, 0);
-      line.stroke = '#ff0000';
+      line.stroke = this.clr;
       line.linewidth = this.visual_settings.get('lineFatness');
       line.addTo(this.group);
       return this._updateVertices();
