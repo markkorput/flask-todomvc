@@ -23,6 +23,7 @@
       this.game = games.last();
       this.game_states = new GameStateList([this.getCurrentState()]);
       this.render();
+      this.$el.hide();
       this.game_ui = new GameUi();
       this.game_visuals = new GameVisuals({
         game_states: this.game_states

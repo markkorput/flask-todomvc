@@ -13,6 +13,8 @@ class @GameView extends Backbone.View
     # console.log @game_states.first()
     @render()
 
+    @$el.hide()
+
     # create UI
     @game_ui = new GameUi()
     @game_visuals = new GameVisuals(game_states: @game_states)

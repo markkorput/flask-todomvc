@@ -1,7 +1,7 @@
 class @GameVisuals
   constructor: (_opts) ->
     @options = _opts
-    @two = new Two({autostart: true, fullscreen: false, type: Two.Types.svg}).appendTo(document.body)
+    @two = new Two({autostart: true, fullscreen: true, type: Two.Types.svg}).appendTo(document.body)
     $(window).on('resize', @_resize)
 
     @visual_settings = new VisualSettings(two: @two, game_states: @options.game_states)

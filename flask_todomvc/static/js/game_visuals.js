@@ -9,7 +9,7 @@
       this.options = _opts;
       this.two = new Two({
         autostart: true,
-        fullscreen: false,
+        fullscreen: true,
         type: Two.Types.svg
       }).appendTo(document.body);
       $(window).on('resize', this._resize);
