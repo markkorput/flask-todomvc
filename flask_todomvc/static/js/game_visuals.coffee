@@ -33,6 +33,50 @@ class @GameVisuals
     @options.game_states.at @options.game_states.length - 2
 
 
+class GraphLine extends Backbone.Model
+  constructor: (_opts) ->
+    @options = _opts
+    @two = _opts.two
+    @game_states = _opts.game_states
+    @visual_settings = _opts.visual_settings
+    @skill = _opts.skill
+
+    @group = @two.makeGroup()
+    @group.translation.set(0, 0)
+
+    @_initPolygons()
+
+    # event hooks
+    @game_states.on 'add', @_growNewState, this
+
+  _initPolygons: ->
+    _.each _.range(1, @game_states.length - 1), (i) =>
+      @_initState(@game_states.at(i-1), @game_states.at(i), i)
+
+  _initState: (prevState, state, idx) ->
+    skill = state.get('skills').find (_skill) => _skill.get('text') == @skill.get('text')
+    prevSkill = prevState.get('skills').find (_skill) => _skill.get('text') == @skill.get('text')
+    @_addLine(prevSkill, skill, idx) if skill && prevSkill
+    
+  _addLine: (prevSkill, skill, index) ->
+    x1 = (index - 1) * @visual_settings.get('horizontalScale')
+    y1 = @yForScore prevSkill.get('score')
+    x2 = x1 + @visual_settings.get('horizontalScale')
+    y2 = @yForScore skill.get('score')
+    line = @two.makeLine(x1, y1, x2, y2)
+    line.stroke = '#ff0000'
+    line.linewidth = @visual_settings.get('lineFatness')
+    line.addTo @group
+
+  _growNewState: (newState) ->
+    prevState = @game_states.at @options.game_states.length - 2
+    @_initState(prevState, newState, @game_states.length-1)
+
+  yForScore: (score) ->
+    # -y * @get('two').height / @get('scoreRange')
+    @visual_settings.scoreToScreenFactor() * score * @visual_settings.get('verticalScaler')
+
+
 class GraphLines extends Backbone.Model
   constructor: (_opts) ->
     @options = _opts
@@ -40,82 +84,19 @@ class GraphLines extends Backbone.Model
     @game_states = _opts.game_states
     @visual_settings = _opts.visual_settings
 
-    @_initScene()
-
-    # event hooks
-    @game_states.on 'add', @_growNewState, this
-
-  _group: ->
-    return @group if @group
     @group = @two.makeGroup()
     @group.translation.set(0, @visual_settings.get('verticalBase'))
-    return @group
 
-  _skillLine: (skill) ->
-    @_skillLines ||= {}
-    return @_skillLines[skill.get('text')] if @_skillLines[skill.get('text')] 
+    @_initScene()
 
-    # initialize polygon
-    @_setSkillLinePoints(skill, [])
-
-  _setSkillLinePoints: (skill, points) ->
-    poly = new Two.Polygon(points, true, false)
-    @_group().remove(@_skillLines[skill.get('text')]) if @_skillLines[skill.get('text')]
-    @_skillLines[skill.get('text')] = poly
-    poly.addTo @_group()
-    poly.fill = '#FF0000'
-    poly.noStroke()
-    return poly
+  _group: -> @group
 
   _initScene: ->
-    _.each _.range(1, @game_states.length - 1), (i) =>
-      @_initState(@game_states.at(i-1), @game_states.at(i), i)
-
-  _initState: (prevState, state, idx) ->
-    state.get('skills').each (skill) =>
-        prevSkill = prevState.get('skills').find (pSkill) -> pSkill.get('text') == skill.get('text')
-        @addLine(prevSkill, skill, idx)
-    
-    # @game_states.each (state) =>
-    #   state.get('skills').each (skill) =>
-    #     @growLine(skill, state)
-
-  addLine: (prevSkill, skill, index) ->
-    x1 = (index - 1) * @visual_settings.get('horizontalScale')
-    y1 = @visual_settings.get('verticalScale') * prevSkill.get('score')
-    x2 = x1 + @visual_settings.get('horizontalScale')
-    y2 = @visual_settings.get('verticalScale') * skill.get('score')
-    line = @two.makeLine(x1, y1, x2, y2)
-    line.stroke = '#ff0000'
-    line.linewidth = @visual_settings.get('lineFatness')
-    line.addTo @_group()
-
-  growLine: (skill) ->
-    # console.log 'Growing line for: '+skill.get('text')
-    line = @_skillLine(skill)
-    vertices = line.vertices || []
-
-    x = vertices.length / 2 * @two.width
-    y = @visual_settings.get('verticalScale') * skill.get('score')
-    point1 = new Two.Anchor(x, y+@visual_settings.get('lineFatness')/2)
-    point2 = new Two.Anchor(x, y-@visual_settings.get('lineFatness')/2)
-
-    if vertices.length > 0
-      second_half = _.map _.range(vertices.length/2, vertices.length/2-1), (i) -> vertices[i]
-      vertices = _.map _.range(vertices.length/2), (i) -> vertices[i]
-      # last_vertice = vertices.pop()
-      $.merge(vertices, $.merge([point1, point2], second_half))
-    else
-      vertices = [point1, point2]
-
-    @_setSkillLinePoints(skill, vertices)
-
-  _growNewState: (newState) ->
-    prevState = @options.game_states.at @options.game_states.length - 2
-    @_initState(prevState, newState, @game_states.length-1)
-    @trigger 'new-state', newState   
-
-    
+    if @game_states && @game_states.first()
+      @graph_lines = @game_states.first().get('skills').map (skill) =>
+        gl = new GraphLine(two: @two, game_states: @game_states, visual_settings: @visual_settings, skill: skill)
+        gl.group.addTo @group
+        return gl
 
 class GraphLinesOps
   constructor: (_opts) ->
@@ -124,15 +105,25 @@ class GraphLinesOps
     @two = @target.two
 
     # start by moving the whole group to the right edge of the screen, making it look the lines scroll into view
-    console.log @target.visual_settings.desiredBaseline()
+    # console.log @target.visual_settings.desiredBaseline()
     @target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
+    # @target._group().scale = 0.3
 
     # event hooks
     # @target.on 'new-state', (-> @shrinkTween().start()), this
-    @target.on 'new-state', (-> @scrollTween().start()), this
+
+    @target.game_states.on 'add', =>
+      # console.log 'Scroll Tween'
+      @scrollTween().start()
+
     @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
       # console.log 'baseline shift to: ' + model.desiredBaseline()
       @baselineShiftTween(model.desiredBaseline()).start()
+
+    @target.visual_settings.on 'change:scoreRange', (model,val,obj) =>
+      # console.log 'range shift to: ' + model.minScore() + ', '+ model.maxScore()
+      @rangeShiftTween(model.previous('scoreRange'), val).start()
+
 
   scrollTween: ->
     tween = new TWEEN.Tween( @target._group().translation )
@@ -143,6 +134,24 @@ class GraphLinesOps
     tween = new TWEEN.Tween( @target._group().translation )
       .to({y: toY}, 500)
       .easing( TWEEN.Easing.Exponential.InOut )
+
+  rangeShiftTween: (from, to) ->
+    scaleFactor = from / to
+    console.log 'rangeShiftTween: '+scaleFactor
+    # console.log from
+    # console.log to
+
+    tween = new TWEEN.Tween( {y: 0} )
+      .to({y: 1}, 500)
+      .easing( TWEEN.Easing.Exponential.InOut )
+      .onStart =>
+        _.each @target._group().children, (polygon,nr) ->
+          _.each polygon.vertices, (vertice) ->
+            new TWEEN.Tween(vertice)
+              .to({y: vertice.y * scaleFactor})
+              .easing( TWEEN.Easing.Exponential.InOut )
+              .start()
+
 
   shrinkTween: ->
     toScale = @_shrinkScale()
@@ -162,18 +171,13 @@ class GraphLinesOps
 
 
 # helper class to perform calculations based in a specific state
-class VisualState
-  constructor: (_state, _opts) ->
-    @state = _state # this attribute is required
-    @options = _opts || {}
-    
-
 class VisualSettings extends Backbone.Model
   defaults:
-    verticalScale: 100
     horizontalScale: 300
     verticalBase: 0
     lineFatness: 3
+    scoreRange: 5
+    verticalScaler: 1
 
   initialize: ->
     @calculate()
@@ -182,7 +186,10 @@ class VisualSettings extends Backbone.Model
   calculate: ->
     # set baseline in the (vertical) middle of the screen
     # @set(verticalBase: @get('two').height/2) if @get('two')
-    @set(verticalBase: @desiredBaseline())
+    @set {
+      verticalBase: @desiredBaseline()
+      # scoreRange: @deltaScore()
+    }
 
   _allScores: ->
     _.flatten (@get('game_states') || new Backbone.Collection()).map (state) ->
@@ -191,10 +198,17 @@ class VisualSettings extends Backbone.Model
 
   maxScore: -> _.max @_allScores()
   minScore: -> _.min @_allScores()
+  avgScore: -> @minScore() + @deltaScore()/2
   deltaScore: -> @maxScore() - @minScore()
+  scoreToScreenFactor: ->
+    return 1 if @get('scoreRange') == 0
+    @get('two').height / -@get('scoreRange')
+
   desiredBaseline: ->
     return @get('two').height/2 if @deltaScore() == 0
-    @maxScore() - @maxScore() * @get('two').height / @deltaScore()
+    return @get('two').height/2 - @avgScore()*@scoreToScreenFactor()
+
+    
 
 
       
