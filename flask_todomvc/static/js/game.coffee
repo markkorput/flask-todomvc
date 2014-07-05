@@ -3,25 +3,37 @@
 #
 class @GameView extends Backbone.View
   initialize: ->
+    # init logic
     @admin_view = new AdminView()
     games = new GameList;
     games.fetch();
     games.create({}) if games.length < 1
     @game = games.last()
+    @game_states = new GameStateList([@getCurrentState()])
+    # console.log @game_states.first()
     @render()
 
+    # create UI
     @game_ui = new GameUi()
+    @game_visuals = new GameVisuals(game_states: @game_states)
+
+    # setup event hooks
     @game_ui.on 'answer-yes', (-> @trigger 'answer', @getAnswer('yes')), this
     @game_ui.on 'answer-no', (-> @trigger 'answer', @getAnswer('no')), this
-
-    @game_visuals = new GameVisuals()
-    
-    @on 'answer', (answer) => @game.submitAnswer(answer)
+    @on 'answer', ((answer)-> @game.submitAnswer(answer)), this
     @game.on 'change', @renderGame, this
     @game.on 'change', @renderStats, this
     @game.user.on 'change', @renderStats, this
     @game.submissions.on 'change', @renderStats, this
+    @game.submissions.on 'add', (-> @game_states.add([@getCurrentState()])), this
 
+  # helpers
+  game_el: -> @$el.find('#current-question')
+  stats_el: -> @$el.find('#game-stats')
+  getAnswer: (txt) -> _.find @game.current_question().get('answers') || [], (answer) -> answer.get('text').toLowerCase() == txt.toLowerCase()
+  getCurrentState: -> new GameState number_of_answers: @game.submissions.length, skills : @game.user.skills
+
+  # renderers
   render: ->
     @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul>'
     # @$el.append @admin_view.render().el
@@ -29,11 +41,6 @@ class @GameView extends Backbone.View
     @renderGame()
     @renderStats()
     this
-
-  game_el: -> @$el.find('#current-question')
-  stats_el: -> @$el.find('#game-stats')
-
-  getAnswer: (txt) -> _.find @game.current_question().get('answers') || [], (answer) -> answer.get('text').toLowerCase() == txt.toLowerCase()
 
   renderGame: ->
     @game_el().html ''
@@ -47,22 +54,43 @@ class @GameView extends Backbone.View
 
         @game_el().append(button)
 
-
   renderStats: ->
     @stats_el().html ''
 
-    if user = @game.user
-      # progress 
-      @stats_el().append('<li>Questions answered: '+@game.submissions.length+'</li>') 
+    state = @getCurrentState()
 
-      # user and scores
-      @stats_el().append('<li>User: '+user.get('name')+'</li>') 
+    # user and scores
+    @stats_el().append('<li>User: '+@game.user.get('name')+'</li>') if @game.user
 
-      skills_el = $('<ul></ul>')
-      user.skills.each (skill) -> skills_el.append('<li>'+skill.get('text')+': '+skill.get('score')+'</li>')
-      skills_line = $('<li></li>')
-      skills_line.append(skills_el)
-      @stats_el().append(skills_line)
+    # progress 
+    @stats_el().append('<li>Questions answered: '+state.get('number_of_answers')+'</li>') 
+
+    # skills
+    skills_el = $('<ul></ul>')
+    (state.get('skills') || new Backbone.Collection).each (skill) -> skills_el.append('<li>'+skill.get('text')+': '+skill.get('score')+'</li>')
+    skills_line = $('<li></li>')
+    skills_line.append(skills_el)
+    @stats_el().append(skills_line)
+
+
+#
+# GameState
+#
+class GameState extends Backbone.Model
+  defaults:
+    number_of_answers: 0
+    skills:
+      'income tax': 0
+      'education level': 0
+      'public health': 0
+      'entrepreneurship': 0
+      'community art': 0
+      'immigration': 0
+
+class GameStateList extends Backbone.Collection
+  model: GameState
+  # localStorage: new Backbone.LocalStorage("todos-backbone")
+
 
 
 #

@@ -10,6 +10,9 @@
       }).appendTo(document.body);
       $(window).on('resize', this._resize);
       this._initScene();
+      if (this.options.game_states) {
+        this.options.game_states.on('add', this._transitionToState, this);
+      }
     }
 
     GameVisuals.prototype._resize = function() {
@@ -24,9 +27,19 @@
     GameVisuals.prototype._initScene = function() {
       var bg;
       bg = this.two.makeRectangle(this.two.width / 2, this.two.height / 2, this.two.width, this.two.height);
-      bg.fill = '#000000';
+      bg.fill = '#92adac';
       bg.noStroke();
       return this.two.add(bg);
+    };
+
+    GameVisuals.prototype.previousState = function() {
+      return this.options.game_states.at(this.options.game_states.length - 2);
+    };
+
+    GameVisuals.prototype._transitionToState = function(newState) {
+      console.log('new state');
+      console.log(newState);
+      return console.log(this.previousState());
     };
 
     return GameVisuals;
