@@ -1,4 +1,49 @@
 #
+# GameBoardView
+#
+class @GameView extends Backbone.View
+  initialize: ->
+    @admin_view = new AdminView()
+
+    games = new GameList;
+    games.fetch();
+    games.create({}) if games.length < 1
+    @game = games.last()
+    @render()
+
+    @on 'answer', @submitAnswer
+    @game.on 'change', @render, this
+
+  render: ->
+    @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul><hr/>'
+    @$el.append @admin_view.render().el
+    
+    @renderGame()
+    @renderStats()
+    this
+
+  game_el: -> @$el.find('#current-question')
+  stats_el: -> @$el.find('#game-stats')
+
+  renderGame: ->
+    if q = @game.current_question()
+      @game_el().append('<h2>'+q.get('text')+'</h2>')
+      _.each q.get('answers'), (answer) =>
+        button = $('<button>'+answer.get('text')+'</button>')
+        button.on 'click', (event) =>
+          @trigger('answer', answer)
+
+        @game_el().append(button)
+
+
+  renderStats: ->
+    if @game.user
+      @stats_el().append('<li>User: '+@game.user.get('name')+'</li>') 
+
+  submitAnswer: (answer) ->
+    @game.nextQuestion()
+
+#
 # Question
 #
 class Answer extends Backbone.Model
@@ -13,7 +58,7 @@ class Answer extends Backbone.Model
       'immigration': 0
 
 
-class Question extends Backbone.Model
+class @Question extends Backbone.Model
   defaults:
     text: 'Question Text'
     answers: [
@@ -21,7 +66,7 @@ class Question extends Backbone.Model
       new Answer(text: 'No')
     ]
 
-class QuestionList extends Backbone.Collection
+class @QuestionList extends Backbone.Collection
   model: Question
   localStorage: new Backbone.LocalStorage("todos-backbone")
 
@@ -86,39 +131,76 @@ class UserListView extends Backbone.View
 #
 
 class Game extends Backbone.Model
-  defaults: { created_at: new Date(), user: new User() }
+  defaults: { created_at: new Date() }
 
   initialize: ->
     #   @on 'destroy', ->
     #     @get('user').destroy if @get('user')
 
-    @questions = new QuestionList()
-    @questions.fetch();
-    @_createQuestions() if @questions.length < 1
+    @user = new User()
+    @questions = new QuestionList(@_questionData())
+    # @questions.fetch();
 
-  _createQuestions: ->
-    @questions.create
-      text: 'Should we build more schools?'
-      answers: [
-        new Answer
-          text: 'Yes'
-          manipulations:
-            'income tax': 5
-            'education level': 3
-            'public health': 2
-            'entrepreneurship': 3
-            'community art': -3
-            'immigration': 0
-        new Answer
-          text: 'No'
-          manipulations:
-            'income tax': -3
-            'education level': -4
-            'public health': -5
-            'entrepreneurship': -1
-            'community art': +4
-            'immigration': 0
-      ]
+  # returns the current question object
+  current_question: ->
+    @nextQuestion() if !@get('current_question_id')
+    @questions.get(@get('current_question_id'))
+
+  # just sets the current_question_id to a new value
+  nextQuestion: ->
+    @set(current_question_id: @questions.sample().cid)
+    # return the question object
+    @current_question()
+
+  _questionData: ->
+    [
+      {
+        text: 'Should we build more schools?'
+        answers: [
+          new Answer
+            text: 'Yes'
+            manipulations:
+              'income tax': 5
+              'education level': 3
+              'public health': 2
+              'entrepreneurship': 3
+              'community art': -3
+              'immigration': 0
+          new Answer
+            text: 'No'
+            manipulations:
+              'income tax': -3
+              'education level': -4
+              'public health': -5
+              'entrepreneurship': -1
+              'community art': +4
+              'immigration': 0
+        ],
+      },
+      {
+        text: 'Should we let foreigners work in the USA?'
+        answers: [
+          new Answer
+            text: 'Yes'
+            manipulations:
+              'income tax': -3
+              'education level': 1
+              'public health': 1
+              'entrepreneurship': 3
+              'community art': 2
+              'immigration': 5
+          new Answer
+            text: 'No'
+            manipulations:
+              'income tax': 2
+              'education level': -1
+              'public health': -1
+              'entrepreneurship': -3
+              'community art': -2
+              'immigration': -4
+        ]
+      }
+    ]
 
 class GameList extends Backbone.Collection
   model: Game
@@ -142,12 +224,11 @@ class GameListView extends Backbone.View
     this
 
 
-class @GameView extends Backbone.View
+class AdminView extends Backbone.View
+  tagName: 'div'
+  className: 'admin-info'
+
   initialize: ->
-    @games = new GameList;
-    @games.fetch();
-    @games.create({}) if @games.length < 1
-    @game = @games.last()
     @render()
 
   render: ->
