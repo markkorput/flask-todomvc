@@ -17,9 +17,6 @@
         two: this.two
       });
       this._initScene();
-      if (this.options.game_states) {
-        this.options.game_states.on('add', this._transitionToState, this);
-      }
       this.two.bind('update', function() {
         return TWEEN.update();
       });
@@ -53,8 +50,6 @@
     GameVisuals.prototype.previousState = function() {
       return this.options.game_states.at(this.options.game_states.length - 2);
     };
-
-    GameVisuals.prototype._transitionToState = function(newState) {};
 
     return GameVisuals;
 
@@ -122,9 +117,9 @@
 
     GraphLines.prototype.addLine = function(prevSkill, skill, index) {
       var line, x1, x2, y1, y2;
-      x1 = (index - 1) * this.two.width;
+      x1 = (index - 1) * this.visual_settings.get('horizontalScale');
       y1 = this.visual_settings.get('verticalScale') * prevSkill.get('score');
-      x2 = index * this.two.width;
+      x2 = x1 + this.visual_settings.get('horizontalScale');
       y2 = this.visual_settings.get('verticalScale') * skill.get('score');
       line = this.two.makeLine(x1, y1, x2, y2);
       line.stroke = '#ff0000';
@@ -171,14 +166,15 @@
       this.target = _opts.target || _opts.graph_lines;
       this.two = this.target.two;
       this.target.on('new-state', (function() {
-        return this.shrinkTween().start();
+        return this.scrollTween().start();
       }), this);
+      this.target._group().translation.x = this.two.width;
     }
 
     GraphLinesOps.prototype.scrollTween = function() {
       var tween;
       return tween = new TWEEN.Tween(this.target._group().translation).to({
-        x: this.target._group().translation.x + this.target.visual_settings.get('horizontalScale')
+        x: this.target._group().translation.x - this.target.visual_settings.get('horizontalScale')
       }, 500).easing(TWEEN.Easing.Exponential.InOut);
     };
 

@@ -10,8 +10,6 @@ class @GameVisuals
     @_initScene()
 
     # setup event hooks
-    @options.game_states.on 'add', @_transitionToState, this if @options.game_states
-
     @two.bind 'update', -> TWEEN.update()
 
   _resize: ->
@@ -33,11 +31,6 @@ class @GameVisuals
 
   previousState: ->
     @options.game_states.at @options.game_states.length - 2
-
-  _transitionToState: (newState) ->
-    # console.log 'new state'
-    # console.log newState
-    # console.log @previousState()
 
 
 class GraphLines extends Backbone.Model
@@ -88,9 +81,9 @@ class GraphLines extends Backbone.Model
     #     @growLine(skill, state)
 
   addLine: (prevSkill, skill, index) ->
-    x1 = (index - 1) * @two.width
+    x1 = (index - 1) * @visual_settings.get('horizontalScale')
     y1 = @visual_settings.get('verticalScale') * prevSkill.get('score')
-    x2 = index * @two.width
+    x2 = x1 + @visual_settings.get('horizontalScale')
     y2 = @visual_settings.get('verticalScale') * skill.get('score')
     line = @two.makeLine(x1, y1, x2, y2)
     line.stroke = '#ff0000'
@@ -130,12 +123,14 @@ class GraphLinesOps
     @target = _opts.target || _opts.graph_lines
     @two = @target.two
 
-    @target.on 'new-state', (-> @shrinkTween().start()), this
-    # @target.on 'new-state', (-> @scrollTween().start()), this
+    # @target.on 'new-state', (-> @shrinkTween().start()), this
+    @target.on 'new-state', (-> @scrollTween().start()), this
+
+    @target._group().translation.x = @two.width
 
   scrollTween: ->
     tween = new TWEEN.Tween( @target._group().translation )
-      .to({x: @target._group().translation.x + @target.visual_settings.get('horizontalScale')}, 500)
+      .to({x: @target._group().translation.x - @target.visual_settings.get('horizontalScale')}, 500)
       .easing( TWEEN.Easing.Exponential.InOut )
 
   shrinkTween: ->
