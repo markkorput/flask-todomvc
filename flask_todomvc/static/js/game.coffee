@@ -79,13 +79,7 @@ class @GameView extends Backbone.View
 class GameState extends Backbone.Model
   defaults:
     number_of_answers: 0
-    skills:
-      'income tax': 0
-      'education level': 0
-      'public health': 0
-      'entrepreneurship': 0
-      'community art': 0
-      'immigration': 0
+    skills: new Backbone.Collection()
 
 class GameStateList extends Backbone.Collection
   model: GameState
