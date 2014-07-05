@@ -12,6 +12,8 @@ class @GameVisuals
     # setup event hooks
     @options.game_states.on 'add', @_transitionToState, this if @options.game_states
 
+    @two.bind 'update', -> TWEEN.update()
+
   _resize: ->
     return if !@two
     @two.renderer.setSize $(window).width(), $(window).height()
@@ -27,6 +29,7 @@ class @GameVisuals
 
     # graph lines are wrapped in a separate class
     @graph_lines = new GraphLines(two : @two, game_states: @options.game_states, visual_settings: @visual_settings)
+    @graph_lines_ops = new GraphLinesOps(target: @graph_lines)
 
   previousState: ->
     @options.game_states.at @options.game_states.length - 2
@@ -37,7 +40,7 @@ class @GameVisuals
     # console.log @previousState()
 
 
-class GraphLines
+class GraphLines extends Backbone.Model
   constructor: (_opts) ->
     @options = _opts
     @two = _opts.two
@@ -115,22 +118,41 @@ class GraphLines
     @_setSkillLinePoints(skill, vertices)
 
   _growNewState: (newState) ->
-    # console.log 'Growing new state'
-    # newState.get('skills').each (skill) => @growLine(skill)
-    @_initState(@_previousState(), newState, @game_states.length-1)
-    @_group().scale = @_targetScale()
-    @_group().linewidth = @visual_settings.get('lineFatness') / @_targetScale()
+    prevState = @options.game_states.at @options.game_states.length - 2
+    @_initState(prevState, newState, @game_states.length-1)
+    @trigger 'new-state', newState   
 
-  _previousState: ->
-    @options.game_states.at @options.game_states.length - 2
-
-  _targetScale: ->
-    # console.log 'bound'
-    # console.log bound
-    # console.log @_group()
-    bound = @_group().getBoundingClientRect()
-    scale = 1 / ((bound.width / @_group().scale) / @two.width)
     
+
+class GraphLinesOps
+  constructor: (_opts) ->
+    @options = _opts || {}
+    @target = _opts.target || _opts.graph_lines
+    @two = @target.two
+
+    @target.on 'new-state', (-> @shrinkTween().start()), this
+    # @target.on 'new-state', (-> @scrollTween().start()), this
+
+  scrollTween: ->
+    tween = new TWEEN.Tween( @target._group().translation )
+      .to({x: @target._group().translation.x + @target.visual_settings.get('horizontalScale')}, 500)
+      .easing( TWEEN.Easing.Exponential.InOut )
+
+  shrinkTween: ->
+    toScale = @_shrinkScale()
+    toLineWidth = @target.visual_settings.get('lineFatness') / toScale
+
+    tween = new TWEEN.Tween( @target._group() )
+      .to({scale: toScale, linewidth: toLineWidth}, 500)
+      .easing( TWEEN.Easing.Exponential.InOut )
+
+  _shrinkScale: ->
+    bound = @target._group().getBoundingClientRect()
+    scale = 1 / ((bound.width / @target._group().scale) / @two.width)
+
+
+
+
 
 
 # helper class to perform calculations based in a specific state
@@ -143,6 +165,7 @@ class VisualState
 class VisualSettings extends Backbone.Model
   defaults:
     verticalScale: 100
+    horizontalScale: 300
     verticalBase: 0
     lineFatness: 3
 
