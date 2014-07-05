@@ -23,14 +23,16 @@
       this.game = games.last();
       this.render();
       this.on('answer', this.submitAnswer);
-      return this.game.on('change', this.render, this);
+      this.game.on('change', this.renderGame, this);
+      this.game.user.on('change', this.renderScores, this);
+      return this.game.user.skills.on('change', this.renderScores, this);
     };
 
     GameView.prototype.render = function() {
       this.$el.html('<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul><hr/>');
       this.$el.append(this.admin_view.render().el);
       this.renderGame();
-      this.renderStats();
+      this.renderScores();
       return this;
     };
 
@@ -45,6 +47,7 @@
     GameView.prototype.renderGame = function() {
       var q,
         _this = this;
+      this.game_el().html('');
       if (q = this.game.current_question()) {
         this.game_el().append('<h2>' + q.get('text') + '</h2>');
         return _.each(q.get('answers'), function(answer) {
@@ -58,13 +61,33 @@
       }
     };
 
-    GameView.prototype.renderStats = function() {
-      if (this.game.user) {
-        return this.stats_el().append('<li>User: ' + this.game.user.get('name') + '</li>');
+    GameView.prototype.renderScores = function() {
+      var skills_el, skills_line, user;
+      this.stats_el().html('');
+      if (user = this.game.user) {
+        this.stats_el().append('<li>User: ' + user.get('name') + '</li>');
+        skills_el = $('<ul></ul>');
+        user.skills.each(function(skill) {
+          return skills_el.append('<li>' + skill.get('text') + ': ' + skill.get('score') + '</li>');
+        });
+        skills_line = $('<li></li>');
+        skills_line.append(skills_el);
+        return this.stats_el().append(skills_line);
       }
     };
 
     GameView.prototype.submitAnswer = function(answer) {
+      var _this = this;
+      _.each(answer.get('manipulations'), function(val, key, obj) {
+        var skill;
+        if (skill = _this.game.user.skills.findWhere({
+          text: key
+        })) {
+          return skill.set({
+            score: skill.get('score') + val
+          });
+        }
+      });
       return this.game.nextQuestion();
     };
 
@@ -176,8 +199,11 @@
     }
 
     User.prototype.defaults = {
-      name: 'John Doe',
-      skills: [
+      name: 'John Doe'
+    };
+
+    User.prototype.initialize = function() {
+      return this.skills = new Backbone.Collection([
         {
           text: 'income tax',
           score: 0
@@ -197,7 +223,7 @@
           text: 'immigration',
           score: 0
         }
-      ]
+      ]);
     };
 
     return User;
@@ -244,8 +270,8 @@
         var skills_el, skills_line;
         _this.$el.append('<li>Name: ' + user.get('name') + '</li>');
         skills_el = $('<ul></ul>');
-        _.each(user.get('skills'), function(skill) {
-          return skills_el.append('<li>' + skill.text + ': ' + skill.score + '</li>');
+        user.skills.each(function(skill) {
+          return skills_el.append('<li>' + skill.get('text') + ': ' + skill.get('score') + '</li>');
         });
         skills_line = $('<li></li>');
         skills_line.append(skills_el);

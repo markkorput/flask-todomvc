@@ -12,20 +12,24 @@ class @GameView extends Backbone.View
     @render()
 
     @on 'answer', @submitAnswer
-    @game.on 'change', @render, this
+    @game.on 'change', @renderGame, this
+    @game.user.on 'change', @renderScores, this
+    @game.user.skills.on 'change', @renderScores, this
 
   render: ->
     @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul><hr/>'
     @$el.append @admin_view.render().el
     
     @renderGame()
-    @renderStats()
+    @renderScores()
     this
 
   game_el: -> @$el.find('#current-question')
   stats_el: -> @$el.find('#game-stats')
 
   renderGame: ->
+    @game_el().html ''
+
     if q = @game.current_question()
       @game_el().append('<h2>'+q.get('text')+'</h2>')
       _.each q.get('answers'), (answer) =>
@@ -36,11 +40,26 @@ class @GameView extends Backbone.View
         @game_el().append(button)
 
 
-  renderStats: ->
-    if @game.user
-      @stats_el().append('<li>User: '+@game.user.get('name')+'</li>') 
+  renderScores: ->
+    @stats_el().html ''
+
+    if user = @game.user
+      @stats_el().append('<li>User: '+user.get('name')+'</li>') 
+
+      skills_el = $('<ul></ul>')
+      user.skills.each (skill) -> skills_el.append('<li>'+skill.get('text')+': '+skill.get('score')+'</li>')
+      skills_line = $('<li></li>')
+      skills_line.append(skills_el)
+      @stats_el().append(skills_line)
+
 
   submitAnswer: (answer) ->
+    # apply the answer's manipulation values to the current user's skills
+    _.each answer.get('manipulations'), (val, key, obj) =>
+      if skill = @game.user.skills.findWhere(text: key)
+        skill.set(score: skill.get('score') + val)
+
+    # on to the net question
     @game.nextQuestion()
 
 #
@@ -92,14 +111,16 @@ class QuestionListView extends Backbone.View
 class User extends Backbone.Model
   defaults:
     name: 'John Doe'
-    skills: [
+
+  initialize: ->
+    @skills = new Backbone.Collection([
       {text: 'income tax', score: 0}
       {text: 'education level', score: 0}
       {text: 'public health', score: 0}
       {text: 'entrepreneurship', score: 0}
       {text: 'community art', score: 0}
       {text: 'immigration', score: 0}
-    ]
+    ])
 
 class @UserList extends Backbone.Collection
   model: User
@@ -119,7 +140,7 @@ class UserListView extends Backbone.View
       @$el.append('<li>Name: '+user.get('name')+'</li>')
 
       skills_el = $('<ul></ul>')
-      _.each user.get('skills'), (skill) -> skills_el.append('<li>'+skill.text+': '+skill.score+'</li>')
+      user.skills.each (skill) -> skills_el.append('<li>'+skill.get('text')+': '+skill.get('score')+'</li>')
       skills_line = $('<li></li>')
       skills_line.append(skills_el)
       @$el.append(skills_line)
