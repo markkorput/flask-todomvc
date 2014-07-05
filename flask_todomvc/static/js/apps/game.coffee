@@ -4,12 +4,15 @@
 class @GameView extends Backbone.View
   initialize: ->
     @admin_view = new AdminView()
-
     games = new GameList;
     games.fetch();
     games.create({}) if games.length < 1
     @game = games.last()
     @render()
+
+    @game_ui = new GameUi()
+    @game_ui.on 'answer-yes', (-> @trigger 'answer', @getAnswer('yes')), this
+    @game_ui.on 'answer-no', (-> @trigger 'answer', @getAnswer('no')), this
 
     @on 'answer', (answer) => @game.submitAnswer(answer)
     @game.on 'change', @renderGame, this
@@ -27,6 +30,8 @@ class @GameView extends Backbone.View
 
   game_el: -> @$el.find('#current-question')
   stats_el: -> @$el.find('#game-stats')
+
+  getAnswer: (txt) -> _.find @game.current_question().get('answers') || [], (answer) -> answer.get('text').toLowerCase() == txt.toLowerCase()
 
   renderGame: ->
     @game_el().html ''

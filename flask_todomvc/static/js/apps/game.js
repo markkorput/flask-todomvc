@@ -23,6 +23,13 @@
       }
       this.game = games.last();
       this.render();
+      this.game_ui = new GameUi();
+      this.game_ui.on('answer-yes', (function() {
+        return this.trigger('answer', this.getAnswer('yes'));
+      }), this);
+      this.game_ui.on('answer-no', (function() {
+        return this.trigger('answer', this.getAnswer('no'));
+      }), this);
       this.on('answer', function(answer) {
         return _this.game.submitAnswer(answer);
       });
@@ -45,6 +52,12 @@
 
     GameView.prototype.stats_el = function() {
       return this.$el.find('#game-stats');
+    };
+
+    GameView.prototype.getAnswer = function(txt) {
+      return _.find(this.game.current_question().get('answers') || [], function(answer) {
+        return answer.get('text').toLowerCase() === txt.toLowerCase();
+      });
     };
 
     GameView.prototype.renderGame = function() {
