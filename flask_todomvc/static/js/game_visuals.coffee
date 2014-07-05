@@ -4,7 +4,7 @@ class @GameVisuals
     @two = new Two({autostart: true, fullscreen: false, type: Two.Types.svg}).appendTo(document.body)
     $(window).on('resize', @_resize)
 
-    @visual_settings = new VisualSettings(two: @two)
+    @visual_settings = new VisualSettings(two: @two, game_states: @options.game_states)
 
     # create visual elements
     @_initScene()
@@ -123,14 +123,25 @@ class GraphLinesOps
     @target = _opts.target || _opts.graph_lines
     @two = @target.two
 
+    # start by moving the whole group to the right edge of the screen, making it look the lines scroll into view
+    console.log @target.visual_settings.desiredBaseline()
+    @target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
+
+    # event hooks
     # @target.on 'new-state', (-> @shrinkTween().start()), this
     @target.on 'new-state', (-> @scrollTween().start()), this
-
-    @target._group().translation.x = @two.width
+    @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
+      # console.log 'baseline shift to: ' + model.desiredBaseline()
+      @baselineShiftTween(model.desiredBaseline()).start()
 
   scrollTween: ->
     tween = new TWEEN.Tween( @target._group().translation )
       .to({x: @target._group().translation.x - @target.visual_settings.get('horizontalScale')}, 500)
+      .easing( TWEEN.Easing.Exponential.InOut )
+
+  baselineShiftTween: (toY) ->
+    tween = new TWEEN.Tween( @target._group().translation )
+      .to({y: toY}, 500)
       .easing( TWEEN.Easing.Exponential.InOut )
 
   shrinkTween: ->
@@ -165,5 +176,27 @@ class VisualSettings extends Backbone.Model
     lineFatness: 3
 
   initialize: ->
+    @calculate()
+    @get('game_states').on 'add', @calculate, this if @get('game_states')
+
+  calculate: ->
     # set baseline in the (vertical) middle of the screen
-    @set(verticalBase: @get('two').height/2) if @get('two')
+    # @set(verticalBase: @get('two').height/2) if @get('two')
+    @set(verticalBase: @desiredBaseline())
+
+  _allScores: ->
+    _.flatten (@get('game_states') || new Backbone.Collection()).map (state) ->
+      state.get('skills').map (skill) ->
+        skill.get('score')
+
+  maxScore: -> _.max @_allScores()
+  minScore: -> _.min @_allScores()
+  deltaScore: -> @maxScore() - @minScore()
+  desiredBaseline: ->
+    return @get('two').height/2 if @deltaScore() == 0
+    @maxScore() - @maxScore() * @get('two').height / @deltaScore()
+
+
+      
+
+

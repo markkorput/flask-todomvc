@@ -14,7 +14,8 @@
       }).appendTo(document.body);
       $(window).on('resize', this._resize);
       this.visual_settings = new VisualSettings({
-        two: this.two
+        two: this.two,
+        game_states: this.options.game_states
       });
       this._initScene();
       this.two.bind('update', function() {
@@ -162,19 +163,31 @@
 
   GraphLinesOps = (function() {
     function GraphLinesOps(_opts) {
+      var _this = this;
       this.options = _opts || {};
       this.target = _opts.target || _opts.graph_lines;
       this.two = this.target.two;
+      console.log(this.target.visual_settings.desiredBaseline());
+      this.target._group().translation.set(this.two.width, this.target.visual_settings.desiredBaseline());
       this.target.on('new-state', (function() {
         return this.scrollTween().start();
       }), this);
-      this.target._group().translation.x = this.two.width;
+      this.target.visual_settings.on('change:verticalBase', function(model, val, obj) {
+        return _this.baselineShiftTween(model.desiredBaseline()).start();
+      });
     }
 
     GraphLinesOps.prototype.scrollTween = function() {
       var tween;
       return tween = new TWEEN.Tween(this.target._group().translation).to({
         x: this.target._group().translation.x - this.target.visual_settings.get('horizontalScale')
+      }, 500).easing(TWEEN.Easing.Exponential.InOut);
+    };
+
+    GraphLinesOps.prototype.baselineShiftTween = function(toY) {
+      var tween;
+      return tween = new TWEEN.Tween(this.target._group().translation).to({
+        y: toY
       }, 500).easing(TWEEN.Easing.Exponential.InOut);
     };
 
@@ -224,11 +237,43 @@
     };
 
     VisualSettings.prototype.initialize = function() {
-      if (this.get('two')) {
-        return this.set({
-          verticalBase: this.get('two').height / 2
-        });
+      this.calculate();
+      if (this.get('game_states')) {
+        return this.get('game_states').on('add', this.calculate, this);
       }
+    };
+
+    VisualSettings.prototype.calculate = function() {
+      return this.set({
+        verticalBase: this.desiredBaseline()
+      });
+    };
+
+    VisualSettings.prototype._allScores = function() {
+      return _.flatten((this.get('game_states') || new Backbone.Collection()).map(function(state) {
+        return state.get('skills').map(function(skill) {
+          return skill.get('score');
+        });
+      }));
+    };
+
+    VisualSettings.prototype.maxScore = function() {
+      return _.max(this._allScores());
+    };
+
+    VisualSettings.prototype.minScore = function() {
+      return _.min(this._allScores());
+    };
+
+    VisualSettings.prototype.deltaScore = function() {
+      return this.maxScore() - this.minScore();
+    };
+
+    VisualSettings.prototype.desiredBaseline = function() {
+      if (this.deltaScore() === 0) {
+        return this.get('two').height / 2;
+      }
+      return this.maxScore() - this.maxScore() * this.get('two').height / this.deltaScore();
     };
 
     return VisualSettings;
