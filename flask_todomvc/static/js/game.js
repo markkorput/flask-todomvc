@@ -30,6 +30,7 @@
       this.game_ui.on('answer-no', (function() {
         return this.trigger('answer', this.getAnswer('no'));
       }), this);
+      this.game_visuals = new GameVisuals();
       this.on('answer', function(answer) {
         return _this.game.submitAnswer(answer);
       });

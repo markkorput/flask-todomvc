@@ -14,6 +14,8 @@ class @GameView extends Backbone.View
     @game_ui.on 'answer-yes', (-> @trigger 'answer', @getAnswer('yes')), this
     @game_ui.on 'answer-no', (-> @trigger 'answer', @getAnswer('no')), this
 
+    @game_visuals = new GameVisuals()
+    
     @on 'answer', (answer) => @game.submitAnswer(answer)
     @game.on 'change', @renderGame, this
     @game.on 'change', @renderStats, this
