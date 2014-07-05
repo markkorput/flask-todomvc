@@ -196,7 +196,13 @@
       this.options = _opts || {};
       this.target = _opts.target || _opts.graph_lines;
       this.two = this.target.two;
-      this.target._group().translation.set(0, this.target.visual_settings.desiredBaseline());
+      this.target._group().translation.set(this.two.width, this.target.visual_settings.desiredBaseline());
+      this.target.game_states.on('add', function() {
+        return _this.scrollTween().start();
+      });
+      this.target.visual_settings.on('change:verticalBase', function(model, val, obj) {
+        return _this.baselineShiftTween(model.desiredBaseline()).start();
+      });
       this.target.visual_settings.on('change:scoreRange', function(model, val, obj) {
         return _this.rangeShiftTween(model.previous('scoreRange'), val).start();
       });
@@ -231,22 +237,6 @@
       });
     };
 
-    GraphLinesOps.prototype.shrinkTween = function() {
-      var toLineWidth, toScale, tween;
-      toScale = this._shrinkScale();
-      toLineWidth = this.target.visual_settings.get('lineFatness') / toScale;
-      return tween = new TWEEN.Tween(this.target._group()).to({
-        scale: toScale,
-        linewidth: toLineWidth
-      }, 500).easing(TWEEN.Easing.Exponential.InOut);
-    };
-
-    GraphLinesOps.prototype._shrinkScale = function() {
-      var bound, scale;
-      bound = this.target._group().getBoundingClientRect();
-      return scale = 1 / ((bound.width / this.target._group().scale) / this.two.width);
-    };
-
     return GraphLinesOps;
 
   })();
@@ -260,7 +250,7 @@
     }
 
     VisualSettings.prototype.defaults = {
-      horizontalScale: 100,
+      horizontalScale: 300,
       verticalBase: 0,
       lineFatness: 3,
       originalScoreRange: 15,
@@ -278,6 +268,7 @@
 
     VisualSettings.prototype.calculate = function() {
       return this.set({
+        horizontalScale: this.get('two').width / 4,
         verticalBase: this.desiredBaseline(),
         scoreRange: this.deltaScore()
       });

@@ -125,21 +125,15 @@ class GraphLinesOps
     @two = @target.two
 
     # start by moving the whole group to the right edge of the screen, making it look the lines scroll into view
-    # console.log @target.visual_settings.desiredBaseline()
-    #@target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
-    @target._group().translation.set(0, @target.visual_settings.desiredBaseline())
-    # @target._group().scale = 0.3
+    @target._group().translation.set(@two.width, @target.visual_settings.desiredBaseline())
 
-    # event hooks
-    # @target.on 'new-state', (-> @shrinkTween().start()), this
+    @target.game_states.on 'add', =>
+      # console.log 'Scroll Tween'
+      @scrollTween().start()
 
-    # @target.game_states.on 'add', =>
-    #   # console.log 'Scroll Tween'
-    #   @scrollTween().start()
-
-    # @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
-    #   # console.log 'baseline shift to: ' + model.desiredBaseline()
-    #   @baselineShiftTween(model.desiredBaseline()).start()
+    @target.visual_settings.on 'change:verticalBase', (model,val,obj) =>
+      # console.log 'baseline shift to: ' + model.desiredBaseline()
+      @baselineShiftTween(model.desiredBaseline()).start()
 
     @target.visual_settings.on 'change:scoreRange', (model,val,obj) =>
       # console.log 'range shift to: ' + model.minScore() + ', '+ model.maxScore()
@@ -165,23 +159,10 @@ class GraphLinesOps
       .onUpdate (progress) ->
         that.target.visual_settings.set({animationRange: this.range})
 
-  shrinkTween: ->
-    toScale = @_shrinkScale()
-    toLineWidth = @target.visual_settings.get('lineFatness') / toScale
-
-    tween = new TWEEN.Tween( @target._group() )
-      .to({scale: toScale, linewidth: toLineWidth}, 500)
-      .easing( TWEEN.Easing.Exponential.InOut )
-
-  _shrinkScale: ->
-    bound = @target._group().getBoundingClientRect()
-    scale = 1 / ((bound.width / @target._group().scale) / @two.width)
-
-
 # helper class to perform calculations based in a specific state
 class VisualSettings extends Backbone.Model
   defaults:
-    horizontalScale: 100
+    horizontalScale: 300
     verticalBase: 0
     lineFatness: 3
     originalScoreRange: 15
@@ -197,6 +178,7 @@ class VisualSettings extends Backbone.Model
     # set baseline in the (vertical) middle of the screen
     # @set(verticalBase: @get('two').height/2) if @get('two')
     @set {
+      horizontalScale: @get('two').width/4
       verticalBase: @desiredBaseline()
       scoreRange: @deltaScore()
     }
