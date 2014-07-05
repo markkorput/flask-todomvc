@@ -14,11 +14,11 @@ class @GameView extends Backbone.View
     @on 'answer', @submitAnswer
     @game.on 'change', @renderGame, this
     @game.user.on 'change', @renderScores, this
-    @game.user.skills.on 'change', @renderScores, this
+    # @game.user.skills.on 'change', @renderScores, this
 
   render: ->
-    @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul><hr/>'
-    @$el.append @admin_view.render().el
+    @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul>'
+    # @$el.append @admin_view.render().el
     
     @renderGame()
     @renderScores()
@@ -121,6 +121,10 @@ class User extends Backbone.Model
       {text: 'community art', score: 0}
       {text: 'immigration', score: 0}
     ])
+
+    # "forward" skills changes as a change on this user
+    @skills.on 'change', (model,obj) => @trigger 'change', model, obj
+
 
 class @UserList extends Backbone.Collection
   model: User
@@ -250,11 +254,15 @@ class AdminView extends Backbone.View
   className: 'admin-info'
 
   initialize: ->
+    @games_view = new GameListView()
+    @users_view = new UserListView()
+    @questions_view = new QuestionListView()
     @render()
+    @users_view.users.on 'change', @render, this
 
   render: ->
     @$el.html ''
-    @$el.append(new GameListView().render().el)
-    @$el.append(new UserListView().render().el)
-    @$el.append(new QuestionListView().render().el)
+    @$el.append(@games_view.render().el)
+    @$el.append(@users_view.render().el)
+    @$el.append(@questions_view.render().el)
     this

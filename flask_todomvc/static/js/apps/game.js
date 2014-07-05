@@ -24,13 +24,11 @@
       this.render();
       this.on('answer', this.submitAnswer);
       this.game.on('change', this.renderGame, this);
-      this.game.user.on('change', this.renderScores, this);
-      return this.game.user.skills.on('change', this.renderScores, this);
+      return this.game.user.on('change', this.renderScores, this);
     };
 
     GameView.prototype.render = function() {
-      this.$el.html('<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul><hr/>');
-      this.$el.append(this.admin_view.render().el);
+      this.$el.html('<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul>');
       this.renderGame();
       this.renderScores();
       return this;
@@ -203,7 +201,8 @@
     };
 
     User.prototype.initialize = function() {
-      return this.skills = new Backbone.Collection([
+      var _this = this;
+      this.skills = new Backbone.Collection([
         {
           text: 'income tax',
           score: 0
@@ -224,6 +223,9 @@
           score: 0
         }
       ]);
+      return this.skills.on('change', function(model, obj) {
+        return _this.trigger('change', model, obj);
+      });
     };
 
     return User;
@@ -433,14 +435,18 @@
     AdminView.prototype.className = 'admin-info';
 
     AdminView.prototype.initialize = function() {
-      return this.render();
+      this.games_view = new GameListView();
+      this.users_view = new UserListView();
+      this.questions_view = new QuestionListView();
+      this.render();
+      return this.users_view.users.on('change', this.render, this);
     };
 
     AdminView.prototype.render = function() {
       this.$el.html('');
-      this.$el.append(new GameListView().render().el);
-      this.$el.append(new UserListView().render().el);
-      this.$el.append(new QuestionListView().render().el);
+      this.$el.append(this.games_view.render().el);
+      this.$el.append(this.users_view.render().el);
+      this.$el.append(this.questions_view.render().el);
       return this;
     };
 
