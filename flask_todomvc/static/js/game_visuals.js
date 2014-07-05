@@ -96,11 +96,32 @@
 
     GraphLines.prototype._initScene = function() {
       var _this = this;
-      return this.game_states.each(function(state) {
-        return state.get('skills').each(function(skill) {
-          return _this.growLine(skill, state);
-        });
+      return _.each(_.range(1, this.game_states.length - 1), function(i) {
+        return _this._initState(_this.game_states.at(i - 1), _this.game_states.at(i), i);
       });
+    };
+
+    GraphLines.prototype._initState = function(prevState, state, idx) {
+      var _this = this;
+      return state.get('skills').each(function(skill) {
+        var prevSkill;
+        prevSkill = prevState.get('skills').find(function(pSkill) {
+          return pSkill.get('text') === skill.get('text');
+        });
+        return _this.addLine(prevSkill, skill, idx);
+      });
+    };
+
+    GraphLines.prototype.addLine = function(prevSkill, skill, index) {
+      var line, x1, x2, y1, y2;
+      x1 = (index - 1) * this.two.width;
+      y1 = this.visual_settings.get('verticalScale') * prevSkill.get('score');
+      x2 = index * this.two.width;
+      y2 = this.visual_settings.get('verticalScale') * skill.get('score');
+      line = this.two.makeLine(x1, y1, x2, y2);
+      line.stroke = '#ff0000';
+      line.linewidth = 3;
+      return line.addTo(this._group());
     };
 
     GraphLines.prototype.growLine = function(skill) {
@@ -126,11 +147,13 @@
     };
 
     GraphLines.prototype._growNewState = function(newState) {
-      var _this = this;
-      newState.get('skills').each(function(skill) {
-        return _this.growLine(skill);
-      });
+      console.log(this.game_states);
+      this._initState(this._previousState(), newState, this.game_states.length - 1);
       return this._group().scale = this._targetScale();
+    };
+
+    GraphLines.prototype._previousState = function() {
+      return this.options.game_states.at(this.options.game_states.length - 2);
     };
 
     GraphLines.prototype._targetScale = function() {

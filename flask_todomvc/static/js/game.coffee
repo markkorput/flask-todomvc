@@ -31,7 +31,7 @@ class @GameView extends Backbone.View
   game_el: -> @$el.find('#current-question')
   stats_el: -> @$el.find('#game-stats')
   getAnswer: (txt) -> _.find @game.current_question().get('answers') || [], (answer) -> answer.get('text').toLowerCase() == txt.toLowerCase()
-  getCurrentState: -> new GameState number_of_answers: @game.submissions.length, skills : @game.user.skills
+  getCurrentState: -> new GameState number_of_answers: @game.submissions.length, skills : @game.user.skillsClone()
 
   # renderers
   render: ->
@@ -150,6 +150,7 @@ class User extends Backbone.Model
     # "forward" skills changes as a change on this user
     @skills.on 'change', (model,obj) => @trigger 'change', model, obj
 
+  skillsClone: -> new Backbone.Collection(@skills.map (skill) -> skill.clone())
 
 class @UserList extends Backbone.Collection
   model: User

@@ -62,7 +62,7 @@
     GameView.prototype.getCurrentState = function() {
       return new GameState({
         number_of_answers: this.game.submissions.length,
-        skills: this.game.user.skills
+        skills: this.game.user.skillsClone()
       });
     };
 
@@ -275,6 +275,12 @@
       return this.skills.on('change', function(model, obj) {
         return _this.trigger('change', model, obj);
       });
+    };
+
+    User.prototype.skillsClone = function() {
+      return new Backbone.Collection(this.skills.map(function(skill) {
+        return skill.clone();
+      }));
     };
 
     return User;

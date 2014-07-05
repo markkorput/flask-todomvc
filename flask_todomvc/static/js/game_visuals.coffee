@@ -72,9 +72,27 @@ class GraphLines
     return poly
 
   _initScene: ->
-    @game_states.each (state) =>
-      state.get('skills').each (skill) =>
-        @growLine(skill, state)
+    _.each _.range(1, @game_states.length - 1), (i) =>
+      @_initState(@game_states.at(i-1), @game_states.at(i), i)
+
+  _initState: (prevState, state, idx) ->
+    state.get('skills').each (skill) =>
+        prevSkill = prevState.get('skills').find (pSkill) -> pSkill.get('text') == skill.get('text')
+        @addLine(prevSkill, skill, idx)
+    
+    # @game_states.each (state) =>
+    #   state.get('skills').each (skill) =>
+    #     @growLine(skill, state)
+
+  addLine: (prevSkill, skill, index) ->
+    x1 = (index - 1) * @two.width
+    y1 = @visual_settings.get('verticalScale') * prevSkill.get('score')
+    x2 = index * @two.width
+    y2 = @visual_settings.get('verticalScale') * skill.get('score')
+    line = @two.makeLine(x1, y1, x2, y2)
+    line.stroke = '#ff0000'
+    line.linewidth = 3
+    line.addTo @_group()
 
   growLine: (skill) ->
     # console.log 'Growing line for: '+skill.get('text')
@@ -98,8 +116,13 @@ class GraphLines
 
   _growNewState: (newState) ->
     # console.log 'Growing new state'
-    newState.get('skills').each (skill) => @growLine(skill)
+    # newState.get('skills').each (skill) => @growLine(skill)
+    console.log @game_states
+    @_initState(@_previousState(), newState, @game_states.length-1)
     @_group().scale = @_targetScale()
+
+  _previousState: ->
+    @options.game_states.at @options.game_states.length - 2
 
   _targetScale: ->
     # console.log 'bound'
