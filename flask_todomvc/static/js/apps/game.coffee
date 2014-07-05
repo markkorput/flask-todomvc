@@ -11,17 +11,18 @@ class @GameView extends Backbone.View
     @game = games.last()
     @render()
 
-    @on 'answer', @submitAnswer
+    @on 'answer', (answer) => @game.submitAnswer(answer)
     @game.on 'change', @renderGame, this
-    @game.user.on 'change', @renderScores, this
-    # @game.user.skills.on 'change', @renderScores, this
+    @game.on 'change', @renderStats, this
+    @game.user.on 'change', @renderStats, this
+    @game.submissions.on 'change', @renderStats, this
 
   render: ->
     @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul>'
     # @$el.append @admin_view.render().el
     
     @renderGame()
-    @renderScores()
+    @renderStats()
     this
 
   game_el: -> @$el.find('#current-question')
@@ -40,10 +41,14 @@ class @GameView extends Backbone.View
         @game_el().append(button)
 
 
-  renderScores: ->
+  renderStats: ->
     @stats_el().html ''
 
     if user = @game.user
+      # progress 
+      @stats_el().append('<li>Questions answered: '+@game.submissions.length+'</li>') 
+
+      # user and scores
       @stats_el().append('<li>User: '+user.get('name')+'</li>') 
 
       skills_el = $('<ul></ul>')
@@ -52,15 +57,6 @@ class @GameView extends Backbone.View
       skills_line.append(skills_el)
       @stats_el().append(skills_line)
 
-
-  submitAnswer: (answer) ->
-    # apply the answer's manipulation values to the current user's skills
-    _.each answer.get('manipulations'), (val, key, obj) =>
-      if skill = @game.user.skills.findWhere(text: key)
-        skill.set(score: skill.get('score') + val)
-
-    # on to the net question
-    @game.nextQuestion()
 
 #
 # Question
@@ -152,6 +148,17 @@ class UserListView extends Backbone.View
     this
 
 #
+# Submission
+#
+
+class Submission extends Backbone.Model
+
+class SubmissionList extends Backbone.Collection
+  model: Submission
+  localStorage: new Backbone.LocalStorage("todos-backbone")
+
+
+#
 # Game
 #
 
@@ -163,6 +170,7 @@ class Game extends Backbone.Model
     #     @get('user').destroy if @get('user')
 
     @user = new User()
+    @submissions = new SubmissionList()
     @questions = new QuestionList(@_questionData())
     # @questions.fetch();
 
@@ -170,6 +178,17 @@ class Game extends Backbone.Model
   current_question: ->
     @nextQuestion() if !@get('current_question_id')
     @questions.get(@get('current_question_id'))
+
+  submitAnswer: (answer) ->
+    # apply the answer's manipulation values to the current user's skills
+    _.each answer.get('manipulations'), (val, key, obj) =>
+      if skill = @user.skills.findWhere(text: key)
+        skill.set(score: skill.get('score') + val)
+
+    @submissions.create(user_cid: @user.cid, question_cid: @current_question().cid, answer_cid: answer.cid)
+
+    # on to the net question
+    @nextQuestion()
 
   # just sets the current_question_id to a new value
   nextQuestion: ->
