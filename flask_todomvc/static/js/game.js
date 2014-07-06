@@ -29,10 +29,16 @@
         game_states: this.game_states
       });
       yes_func = (function() {
-        return this.trigger('answer', this.getAnswer('yes'));
+        var _this = this;
+        return this.game_visuals.answerYesTween().start().onComplete(function() {
+          return _this.trigger('answer', _this.getAnswer('yes'));
+        });
       });
       no_func = (function() {
-        return this.trigger('answer', this.getAnswer('no'));
+        var _this = this;
+        return this.game_visuals.answerNoTween().start().onComplete(function() {
+          return _this.trigger('answer', _this.getAnswer('no'));
+        });
       });
       this.game_ui.on('answer-yes', yes_func, this);
       this.game_ui.on('answer-no', no_func, this);

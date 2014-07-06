@@ -33,19 +33,21 @@ class @GameVisuals extends Backbone.Model
     @options.game_states.at @options.game_states.length - 2
 
   showQuestion: (question) ->
-    questionVisual = new QuestionVisual()
-    $('body').append questionVisual.el
-    questionVisual.appear(question)
-    
+    @questionVisual.remove() if @questionVisual
+
+    # create and add element to page
+    @questionVisual = new QuestionVisual()
+    $('body').append @questionVisual.el
+
+    # let question appear
+    @questionVisual.appear(question)
+
     # event hooks
-    questionVisual.on 'answer-yes', =>
-      questionVisual.tween(questionVisual.currentPosition(), questionVisual.leftPosition()).start().onComplete =>
-        @trigger 'answer-yes'
-    questionVisual.on 'answer-no', =>
-      questionVisual.tween(questionVisual.currentPosition(), questionVisual.rightPosition()).start().onComplete =>
-        @trigger 'answer-no'
+    @questionVisual.on 'answer-yes', => @trigger 'answer-yes'
+    @questionVisual.on 'answer-no', => @trigger 'answer-no'
 
-
+  answerYesTween: -> @questionVisual.leftTween()
+  answerNoTween: -> @questionVisual.rightTween()
 
 # the QuestionVisual class represents the "question" foreground elements
 class QuestionVisual extends Backbone.View
@@ -85,6 +87,9 @@ class QuestionVisual extends Backbone.View
   leftPosition: -> {x: -@$el.width() - 10, y: @centerPosition().y}
   topPosition: -> {x: @centerPosition().x, y: -@$el.height() - 10}
   currentPosition: -> {x: @$el.css('margin-left').replace(/px$/, ''), y: @$el.css('margin-top').replace(/px$/, '')}
+
+  leftTween: -> @tween @currentPosition(), @leftPosition()
+  rightTween: -> @tween @currentPosition(), @rightPosition()
 
   tween: (from, to) ->
     # save our context for the onUpdate callback

@@ -20,15 +20,21 @@ class @GameView extends Backbone.View
     @game_visuals = new GameVisuals(game_states: @game_states)
 
     # setup event hooks
-    yes_func = (-> @trigger 'answer', @getAnswer('yes'))
-    no_func = (-> @trigger 'answer', @getAnswer('no'))
+    yes_func = (-> 
+      @game_visuals.answerYesTween().start().onComplete =>
+        @trigger 'answer', @getAnswer('yes')
+    )
+    no_func = (-> 
+      @game_visuals.answerNoTween().start().onComplete =>
+        @trigger 'answer', @getAnswer('no')
+    )
     @game_ui.on 'answer-yes', yes_func, this
     @game_ui.on 'answer-no', no_func, this
     @game_ui.on 'toggle-stats', (-> @$el.toggle()), this
     @game_visuals.on 'answer-yes', yes_func, this
     @game_visuals.on 'answer-no', no_func, this
 
-    @on 'answer', ((answer)-> @game.submitAnswer(answer)), this
+    @on 'answer', ((answer) -> @game.submitAnswer(answer)), this
     @game.on 'change', @renderGame, this
     @game.on 'change', @renderStats, this
     @game.user.on 'change', @renderStats, this

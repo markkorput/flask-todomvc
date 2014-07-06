@@ -55,21 +55,27 @@
     };
 
     GameVisuals.prototype.showQuestion = function(question) {
-      var questionVisual,
-        _this = this;
-      questionVisual = new QuestionVisual();
-      $('body').append(questionVisual.el);
-      questionVisual.appear(question);
-      questionVisual.on('answer-yes', function() {
-        return questionVisual.tween(questionVisual.currentPosition(), questionVisual.leftPosition()).start().onComplete(function() {
-          return _this.trigger('answer-yes');
-        });
+      var _this = this;
+      if (this.questionVisual) {
+        this.questionVisual.remove();
+      }
+      this.questionVisual = new QuestionVisual();
+      $('body').append(this.questionVisual.el);
+      this.questionVisual.appear(question);
+      this.questionVisual.on('answer-yes', function() {
+        return _this.trigger('answer-yes');
       });
-      return questionVisual.on('answer-no', function() {
-        return questionVisual.tween(questionVisual.currentPosition(), questionVisual.rightPosition()).start().onComplete(function() {
-          return _this.trigger('answer-no');
-        });
+      return this.questionVisual.on('answer-no', function() {
+        return _this.trigger('answer-no');
       });
+    };
+
+    GameVisuals.prototype.answerYesTween = function() {
+      return this.questionVisual.leftTween();
+    };
+
+    GameVisuals.prototype.answerNoTween = function() {
+      return this.questionVisual.rightTween();
     };
 
     return GameVisuals;
@@ -152,6 +158,14 @@
         x: this.$el.css('margin-left').replace(/px$/, ''),
         y: this.$el.css('margin-top').replace(/px$/, '')
       };
+    };
+
+    QuestionVisual.prototype.leftTween = function() {
+      return this.tween(this.currentPosition(), this.leftPosition());
+    };
+
+    QuestionVisual.prototype.rightTween = function() {
+      return this.tween(this.currentPosition(), this.rightPosition());
     };
 
     QuestionVisual.prototype.tween = function(from, to) {
