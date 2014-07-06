@@ -9,7 +9,7 @@ class @GameView extends Backbone.View
     games.fetch();
     games.create({}) if games.length < 1
     @game = games.last()
-    @game_states = new GameStateList([@getCurrentState()])
+    @game_states = new Backbone.Collection([@getCurrentState()])
     # console.log @game_states.first()
     @render()
 
@@ -22,6 +22,7 @@ class @GameView extends Backbone.View
     # setup event hooks
     @game_ui.on 'answer-yes', (-> @trigger 'answer', @getAnswer('yes')), this
     @game_ui.on 'answer-no', (-> @trigger 'answer', @getAnswer('no')), this
+    @game_ui.on 'toggle-stats', (-> @$el.toggle()), this
     @on 'answer', ((answer)-> @game.submitAnswer(answer)), this
     @game.on 'change', @renderGame, this
     @game.on 'change', @renderStats, this
@@ -36,12 +37,12 @@ class @GameView extends Backbone.View
   game_el: -> @$el.find('#current-question')
   stats_el: -> @$el.find('#game-stats')
   getAnswer: (txt) -> _.find @game.current_question().get('answers') || [], (answer) -> answer.get('text').toLowerCase() == txt.toLowerCase()
-  getCurrentState: -> new GameState number_of_answers: @game.submissions.length, skills : @game.user.skillsClone()
+  getCurrentState: -> new Backbone.Model number_of_answers: @game.submissions.length, skills : @game.user.skillsClone()
 
   # renderers
   render: ->
     @$el.html '<h1>Next Question</h1><div id="current-question"></div><h1>Game Stats</h1><ul id="game-stats"></ul>'
-    # @$el.append @admin_view.render().el
+    @$el.append @admin_view.render().el
     
     @renderGame()
     @renderStats()
@@ -76,20 +77,6 @@ class @GameView extends Backbone.View
     skills_line = $('<li></li>')
     skills_line.append(skills_el)
     @stats_el().append(skills_line)
-
-
-#
-# GameState
-#
-class GameState extends Backbone.Model
-  defaults:
-    number_of_answers: 0
-    skills: new Backbone.Collection()
-
-class GameStateList extends Backbone.Collection
-  model: GameState
-  # localStorage: new Backbone.LocalStorage("todos-backbone")
-
 
 
 #

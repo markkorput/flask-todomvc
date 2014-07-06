@@ -15,4 +15,6 @@ class @GameUi extends Backbone.Model
 
     @trigger 'answer-no', e if e.keyCode == 78 # 'n'
     @trigger 'answer-yes', e if e.keyCode == 89 # 'y' 
+    @trigger 'toggle-stats', e if e.keyCode == 9 # TAB 
+
 

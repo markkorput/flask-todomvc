@@ -33,7 +33,7 @@ class @GameVisuals
     @options.game_states.at @options.game_states.length - 2
 
   showQuestion: (question) ->
-    console.log 'start showing question'
+    # console.log 'start showing question'
 
 
 # the GraphLine class represent a single line in the graph

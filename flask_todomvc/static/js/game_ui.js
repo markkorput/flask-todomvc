@@ -22,7 +22,10 @@
         this.trigger('answer-no', e);
       }
       if (e.keyCode === 89) {
-        return this.trigger('answer-yes', e);
+        this.trigger('answer-yes', e);
+      }
+      if (e.keyCode === 9) {
+        return this.trigger('toggle-stats', e);
       }
     };
 
