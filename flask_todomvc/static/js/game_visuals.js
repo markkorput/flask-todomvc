@@ -4,7 +4,9 @@
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  this.GameVisuals = (function() {
+  this.GameVisuals = (function(_super) {
+    __extends(GameVisuals, _super);
+
     function GameVisuals(_opts) {
       this.options = _opts;
       this.two = new Two({
@@ -17,8 +19,6 @@
         two: this.two,
         game_states: this.options.game_states
       });
-      this.questionVisual = new QuestionVisual();
-      $('body').append(this.questionVisual.el);
       this._initScene();
       this.two.bind('update', function() {
         return TWEEN.update();
@@ -55,12 +55,26 @@
     };
 
     GameVisuals.prototype.showQuestion = function(question) {
-      return this.questionVisual.appear(question);
+      var questionVisual,
+        _this = this;
+      questionVisual = new QuestionVisual();
+      $('body').append(questionVisual.el);
+      questionVisual.appear(question);
+      questionVisual.on('answer-yes', function() {
+        return questionVisual.tween(questionVisual.currentPosition(), questionVisual.leftPosition()).start().onComplete(function() {
+          return _this.trigger('answer-yes');
+        });
+      });
+      return questionVisual.on('answer-no', function() {
+        return questionVisual.tween(questionVisual.currentPosition(), questionVisual.rightPosition()).start().onComplete(function() {
+          return _this.trigger('answer-no');
+        });
+      });
     };
 
     return GameVisuals;
 
-  })();
+  })(Backbone.Model);
 
   QuestionVisual = (function(_super) {
     __extends(QuestionVisual, _super);
@@ -74,37 +88,77 @@
 
     QuestionVisual.prototype.className = 'game-question';
 
-    QuestionVisual.prototype.domEl = function() {
-      return this._domEl || (this._domEl = new DOMElement(this.el));
+    QuestionVisual.prototype.events = {
+      'click .yes': 'clickYes',
+      'click .no': 'clickNo'
+    };
+
+    QuestionVisual.prototype.initialize = function() {
+      this.$el.append($('<span class="question"></span>'));
+      this.$el.append($('<span class="yes button">Yes</span>'));
+      this.$el.append($('<span class="no button">No</span>'));
+      return this.moveTo(this.topPosition());
+    };
+
+    QuestionVisual.prototype.clickYes = function() {
+      return this.trigger('answer-yes');
+    };
+
+    QuestionVisual.prototype.clickNo = function() {
+      return this.trigger('answer-no');
     };
 
     QuestionVisual.prototype.appear = function(question) {
-      this.moveTo(this.startPosition());
-      this.$el.html(question.get('text'));
-      return this.appearTween().start();
+      this.moveTo(this.topPosition());
+      this.$el.find('span.question').html(question.get('text'));
+      return this.tween(this.topPosition(), this.centerPosition()).start();
     };
 
-    QuestionVisual.prototype.moveTo = function(xPos) {
-      return this.$el.css('margin-left', xPos);
-    };
-
-    QuestionVisual.prototype.startPosition = function() {
-      return $(window).width() + 10;
+    QuestionVisual.prototype.moveTo = function(pos) {
+      this.$el.css('margin-left', pos.x);
+      return this.$el.css('margin-top', pos.y);
     };
 
     QuestionVisual.prototype.centerPosition = function() {
-      return $(window).width() / 2 - this.$el.width() / 2;
+      return {
+        x: $(window).width() / 2 - this.$el.width() / 2,
+        y: $(window).height() / 2 - this.$el.height() / 2
+      };
     };
 
-    QuestionVisual.prototype.appearTween = function() {
+    QuestionVisual.prototype.rightPosition = function() {
+      return {
+        x: $(window).width() + 10,
+        y: this.centerPosition().y
+      };
+    };
+
+    QuestionVisual.prototype.leftPosition = function() {
+      return {
+        x: -this.$el.width() - 10,
+        y: this.centerPosition().y
+      };
+    };
+
+    QuestionVisual.prototype.topPosition = function() {
+      return {
+        x: this.centerPosition().x,
+        y: -this.$el.height() - 10
+      };
+    };
+
+    QuestionVisual.prototype.currentPosition = function() {
+      return {
+        x: this.$el.css('margin-left').replace(/px$/, ''),
+        y: this.$el.css('margin-top').replace(/px$/, '')
+      };
+    };
+
+    QuestionVisual.prototype.tween = function(from, to) {
       var that, tween;
       that = this;
-      return tween = new TWEEN.Tween({
-        x: this.startPosition()
-      }).to({
-        x: this.centerPosition()
-      }, 500).easing(TWEEN.Easing.Exponential.InOut).onUpdate(function(progress) {
-        return that.moveTo(this.x);
+      return tween = new TWEEN.Tween(from).to(to, 500).easing(TWEEN.Easing.Exponential.InOut).onUpdate(function(progress) {
+        return that.moveTo(this);
       });
     };
 

@@ -13,7 +13,7 @@
     }
 
     GameView.prototype.initialize = function() {
-      var games;
+      var games, no_func, yes_func;
       this.admin_view = new AdminView();
       games = new GameList;
       games.fetch();
@@ -28,15 +28,19 @@
       this.game_visuals = new GameVisuals({
         game_states: this.game_states
       });
-      this.game_ui.on('answer-yes', (function() {
+      yes_func = (function() {
         return this.trigger('answer', this.getAnswer('yes'));
-      }), this);
-      this.game_ui.on('answer-no', (function() {
+      });
+      no_func = (function() {
         return this.trigger('answer', this.getAnswer('no'));
-      }), this);
+      });
+      this.game_ui.on('answer-yes', yes_func, this);
+      this.game_ui.on('answer-no', no_func, this);
       this.game_ui.on('toggle-stats', (function() {
         return this.$el.toggle();
       }), this);
+      this.game_visuals.on('answer-yes', yes_func, this);
+      this.game_visuals.on('answer-no', no_func, this);
       this.on('answer', (function(answer) {
         return this.game.submitAnswer(answer);
       }), this);

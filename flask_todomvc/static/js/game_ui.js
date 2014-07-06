@@ -24,6 +24,12 @@
       if (e.keyCode === 89) {
         this.trigger('answer-yes', e);
       }
+      if (e.keyCode === 37) {
+        this.trigger('answer-yes', e);
+      }
+      if (e.keyCode === 39) {
+        this.trigger('answer-no', e);
+      }
       if (e.keyCode === 9) {
         return this.trigger('toggle-stats', e);
       }

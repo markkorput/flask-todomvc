@@ -1,12 +1,10 @@
-class @GameVisuals
+class @GameVisuals extends Backbone.Model
   constructor: (_opts) ->
     @options = _opts
     @two = new Two({autostart: true, fullscreen: true, type: Two.Types.svg}).appendTo(document.body)
     $(window).on('resize', @_resize)
 
     @visual_settings = new VisualSettings(two: @two, game_states: @options.game_states)
-    @questionVisual = new QuestionVisual()
-    $('body').append @questionVisual.el
 
     # create visual elements
     @_initScene()
@@ -35,7 +33,17 @@ class @GameVisuals
     @options.game_states.at @options.game_states.length - 2
 
   showQuestion: (question) ->
-    @questionVisual.appear(question)
+    questionVisual = new QuestionVisual()
+    $('body').append questionVisual.el
+    questionVisual.appear(question)
+    
+    # event hooks
+    questionVisual.on 'answer-yes', =>
+      questionVisual.tween(questionVisual.currentPosition(), questionVisual.leftPosition()).start().onComplete =>
+        @trigger 'answer-yes'
+    questionVisual.on 'answer-no', =>
+      questionVisual.tween(questionVisual.currentPosition(), questionVisual.rightPosition()).start().onComplete =>
+        @trigger 'answer-no'
 
 
 
@@ -44,28 +52,47 @@ class QuestionVisual extends Backbone.View
   tagName: 'div'
   className: 'game-question'
 
-  # _createQuestionEl: -> $('body').append $('<div id="game-question">So what?</div>')
+  events:
+    'click .yes': 'clickYes'
+    'click .no': 'clickNo'
 
-  domEl: -> @_domEl ||= new DOMElement(@el)
+  initialize: ->
+    # create question span
+    @$el.append $('<span class="question"></span>')
+
+    # create buttons
+    @$el.append $('<span class="yes button">Yes</span>')
+    @$el.append $('<span class="no button">No</span>')
+
+    # start out of screen
+    @moveTo @topPosition()
+
+  clickYes: -> @trigger 'answer-yes'
+  clickNo: -> @trigger 'answer-no'
 
   appear: (question) ->
-    @moveTo @startPosition()
+    # we'll be dropping down
+    @moveTo @topPosition()
 
     # set question text
-    @$el.html(question.get('text'))
+    @$el.find('span.question').html(question.get('text'))
 
-    @appearTween().start()
+    @tween(@topPosition(), @centerPosition()).start() #.onComplete(=> @disappearTween().delay(1000).start())
 
-  moveTo: (xPos) -> @$el.css('margin-left', xPos)
-  startPosition: -> $(window).width() + 10
-  centerPosition: -> $(window).width()/2 - @$el.width()/2
+  moveTo: (pos) -> @$el.css('margin-left', pos.x); @$el.css('margin-top', pos.y);
+  centerPosition: -> {x: $(window).width()/2 - @$el.width()/2, y: $(window).height()/2 - @$el.height()/2}
+  rightPosition: -> {x: $(window).width() + 10, y: @centerPosition().y}
+  leftPosition: -> {x: -@$el.width() - 10, y: @centerPosition().y}
+  topPosition: -> {x: @centerPosition().x, y: -@$el.height() - 10}
+  currentPosition: -> {x: @$el.css('margin-left').replace(/px$/, ''), y: @$el.css('margin-top').replace(/px$/, '')}
 
-  appearTween: ->
+  tween: (from, to) ->
+    # save our context for the onUpdate callback
     that = this
-    tween = new TWEEN.Tween({x: @startPosition()} )
-      .to({x: @centerPosition()}, 500)
+    tween = new TWEEN.Tween(from)
+      .to(to, 500)
       .easing( TWEEN.Easing.Exponential.InOut )
-      .onUpdate (progress) -> that.moveTo this.x
+      .onUpdate (progress) -> that.moveTo this
 
 
 # the GraphLine class represent a single line in the graph
