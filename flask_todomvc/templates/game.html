@@ -11,7 +11,7 @@
         <script src="bower_components/underscore/underscore.js"></script>
         <script src="bower_components/backbone/backbone.js"></script>
         <script src="bower_components/backbone/backbone.localStorage.js"></script>
-        <script src="bower_components/tweenjs/tween.js"></script>
+        <script src="bower_components/easeljs/tween.js"></script>
         <script src="bower_components/twojs/two.js"></script>
         <script src="js/game_ui.js"></script>
         <script src="js/game_visuals.js"></script>
@@ -19,6 +19,17 @@
 
         <style>
             #game{position: absolute; z-index: 10;}
+            .game-question{
+                position: absolute;
+                z-index: 10;
+                display:block;
+                width: 400px;
+                height: 300px;
+                background:rgb(0,0,0);
+                margin: 100px 0 0 100px;
+                opacity: 0.8;
+                color: white;
+                text-align: center;}
         </style>
     </head>
     <body>

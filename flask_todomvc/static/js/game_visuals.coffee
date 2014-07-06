@@ -5,6 +5,8 @@ class @GameVisuals
     $(window).on('resize', @_resize)
 
     @visual_settings = new VisualSettings(two: @two, game_states: @options.game_states)
+    @questionVisual = new QuestionVisual()
+    $('body').append @questionVisual.el
 
     # create visual elements
     @_initScene()
@@ -33,7 +35,37 @@ class @GameVisuals
     @options.game_states.at @options.game_states.length - 2
 
   showQuestion: (question) ->
-    # console.log 'start showing question'
+    @questionVisual.appear(question)
+
+
+
+# the QuestionVisual class represents the "question" foreground elements
+class QuestionVisual extends Backbone.View
+  tagName: 'div'
+  className: 'game-question'
+
+  # _createQuestionEl: -> $('body').append $('<div id="game-question">So what?</div>')
+
+  domEl: -> @_domEl ||= new DOMElement(@el)
+
+  appear: (question) ->
+    @moveTo @startPosition()
+
+    # set question text
+    @$el.html(question.get('text'))
+
+    @appearTween().start()
+
+  moveTo: (xPos) -> @$el.css('margin-left', xPos)
+  startPosition: -> $(window).width() + 10
+  centerPosition: -> $(window).width()/2 - @$el.width()/2
+
+  appearTween: ->
+    that = this
+    tween = new TWEEN.Tween({x: @startPosition()} )
+      .to({x: @centerPosition()}, 500)
+      .easing( TWEEN.Easing.Exponential.InOut )
+      .onUpdate (progress) -> that.moveTo this.x
 
 
 # the GraphLine class represent a single line in the graph
