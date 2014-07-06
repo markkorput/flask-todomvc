@@ -52,6 +52,10 @@
       return this.options.game_states.at(this.options.game_states.length - 2);
     };
 
+    GameVisuals.prototype.showQuestion = function(question) {
+      return console.log('start showing question');
+    };
+
     return GameVisuals;
 
   })();

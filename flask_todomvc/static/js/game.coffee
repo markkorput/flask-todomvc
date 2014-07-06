@@ -28,6 +28,9 @@ class @GameView extends Backbone.View
     @game.user.on 'change', @renderStats, this
     @game.submissions.on 'change', @renderStats, this
     @game.submissions.on 'add', (-> @game_states.add([@getCurrentState()])), this
+    @game.on 'new-question', ((question) -> @game_visuals.showQuestion(question) ), this 
+
+    @game.nextQuestion()
 
   # helpers
   game_el: -> @$el.find('#current-question')
@@ -198,9 +201,6 @@ class Game extends Backbone.Model
   defaults: { created_at: new Date() }
 
   initialize: ->
-    #   @on 'destroy', ->
-    #     @get('user').destroy if @get('user')
-
     @user = new User()
     @submissions = new SubmissionList()
     @questions = new QuestionList(@_questionData())
@@ -225,6 +225,8 @@ class Game extends Backbone.Model
   # just sets the current_question_id to a new value
   nextQuestion: ->
     @set(current_question_id: @questions.sample().cid)
+    # let anybody hook into this event
+    @trigger 'new-question', @current_question()
     # return the question object
     @current_question()
 

@@ -41,9 +41,13 @@
       this.game.on('change', this.renderStats, this);
       this.game.user.on('change', this.renderStats, this);
       this.game.submissions.on('change', this.renderStats, this);
-      return this.game.submissions.on('add', (function() {
+      this.game.submissions.on('add', (function() {
         return this.game_states.add([this.getCurrentState()]);
       }), this);
+      this.game.on('new-question', (function(question) {
+        return this.game_visuals.showQuestion(question);
+      }), this);
+      return this.game.nextQuestion();
     };
 
     GameView.prototype.game_el = function() {
@@ -419,6 +423,7 @@
       this.set({
         current_question_id: this.questions.sample().cid
       });
+      this.trigger('new-question', this.current_question());
       return this.current_question();
     };
 

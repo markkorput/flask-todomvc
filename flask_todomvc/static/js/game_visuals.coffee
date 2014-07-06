@@ -32,7 +32,11 @@ class @GameVisuals
   previousState: ->
     @options.game_states.at @options.game_states.length - 2
 
+  showQuestion: (question) ->
+    console.log 'start showing question'
 
+
+# the GraphLine class represent a single line in the graph
 class GraphLine extends Backbone.Model
   constructor: (_opts) ->
     @options = _opts
@@ -106,6 +110,8 @@ class GraphLine extends Backbone.Model
         _.each @_verticesByStateIndex(idx), (vertice) =>
           vertice.y = @yForScore(skill.get('score'))
 
+
+# the GaphLines class represent a collection of lines in the graph
 class GraphLines extends Backbone.Model
   constructor: (_opts) ->
     @options = _opts
@@ -127,6 +133,8 @@ class GraphLines extends Backbone.Model
         gl.group.addTo @group
         return gl
 
+
+# the GraphLinesOps class represents operations (animations) performed on the visual graph elements (lines)
 class GraphLinesOps
   constructor: (_opts) ->
     @options = _opts || {}
@@ -168,7 +176,8 @@ class GraphLinesOps
       .onUpdate (progress) ->
         that.target.visual_settings.set({animationRange: this.range})
 
-# helper class to perform calculations based in a specific state
+
+# VisualSettings is a helper class to perform calculations
 class VisualSettings extends Backbone.Model
   defaults:
     horizontalScale: 300
